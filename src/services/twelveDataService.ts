@@ -247,13 +247,13 @@ export async function getTwelveCommodities(): Promise<PriceItem[]> {
 }
 
 export type TwelveRatesResult = {
-  y2Val: number;
-  y2Change: number;
-  y2Pct: number;
+  y2Val: number | null;
+  y2Change: number | null;
+  y2Pct: number | null;
   y5Val: number | null;
   y10Val: number | null;
-  y10Change: number;
-  y10Pct: number;
+  y10Change: number | null;
+  y10Pct: number | null;
   y20Val: number | null;
   y30Val: number | null;
 };
@@ -267,8 +267,6 @@ export async function getTwelveRates(): Promise<TwelveRatesResult> {
     fetchSingleQuote('US30Y'),
   ]);
 
-  const fb = mockMarketData.rates;
-
   const y2 = y2Q.status === 'fulfilled' ? y2Q.value : null;
   const y5 = y5Q.status === 'fulfilled' ? y5Q.value : null;
   const y10 = y10Q.status === 'fulfilled' ? y10Q.value : null;
@@ -276,13 +274,13 @@ export async function getTwelveRates(): Promise<TwelveRatesResult> {
   const y30 = y30Q.status === 'fulfilled' ? y30Q.value : null;
 
   return {
-    y2Val: y2 ? parseFloat(parseFloat(y2.close).toFixed(3)) : fb[1].value,
-    y2Change: y2 ? parseFloat(y2.change) : fb[1].change,
-    y2Pct: y2 ? parseFloat(y2.percent_change) : fb[1].changePct,
+    y2Val: y2 ? parseFloat(parseFloat(y2.close).toFixed(3)) : null,
+    y2Change: y2 ? parseFloat(y2.change) : null,
+    y2Pct: y2 ? parseFloat(y2.percent_change) : null,
     y5Val: y5 ? parseFloat(parseFloat(y5.close).toFixed(3)) : null,
     y10Val: y10 ? parseFloat(parseFloat(y10.close).toFixed(3)) : null,
-    y10Change: y10 ? parseFloat(y10.change) : fb[3].change,
-    y10Pct: y10 ? parseFloat(y10.percent_change) : fb[3].changePct,
+    y10Change: y10 ? parseFloat(y10.change) : null,
+    y10Pct: y10 ? parseFloat(y10.percent_change) : null,
     y20Val: y20 ? parseFloat(parseFloat(y20.close).toFixed(3)) : null,
     y30Val: y30 ? parseFloat(parseFloat(y30.close).toFixed(3)) : null,
   };

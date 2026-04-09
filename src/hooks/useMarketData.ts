@@ -20,6 +20,7 @@ import {
   getFredFedFundsRate,
   getFredVix,
   getFredTipsBreakeven,
+  getFredTreasuryYields,
   getFredYieldCurve,
   getFredYieldCurveOverlays,
 } from '../services/fredService';
@@ -112,8 +113,9 @@ export function useMarketData() {
   const fetchRates = useCallback(async () => {
     setStatus('rates', loadingStatus);
     try {
-      const [tdRates, fedFundsRate, tipsBreakeven, vix] = await Promise.all([
+      const [tdRates, fredYields, fedFundsRate, tipsBreakeven, vix] = await Promise.all([
         getTwelveRates(),
+        getFredTreasuryYields(),
         getFredFedFundsRate(),
         getFredTipsBreakeven(),
         getFredVix(),
@@ -121,11 +123,11 @@ export function useMarketData() {
 
       const fb = mockMarketData.rates;
 
-      const y2Val = tdRates.y2Val;
-      const y5Val = tdRates.y5Val ?? fb[2].value;
-      const y10Val = tdRates.y10Val ?? fb[3].value;
-      const y20Val = tdRates.y20Val ?? fb[4].value;
-      const y30Val = tdRates.y30Val ?? fb[5].value;
+      const y2Val = tdRates.y2Val ?? fredYields.y2 ?? fb[1].value;
+      const y5Val = tdRates.y5Val ?? fredYields.y5 ?? fb[2].value;
+      const y10Val = tdRates.y10Val ?? fredYields.y10 ?? fb[3].value;
+      const y20Val = tdRates.y20Val ?? fredYields.y20 ?? fb[4].value;
+      const y30Val = tdRates.y30Val ?? fredYields.y30 ?? fb[5].value;
 
       const spread2s10s = parseFloat(((y10Val - y2Val) * 100).toFixed(1));
       const spread2s30s = parseFloat(((y30Val - y2Val) * 100).toFixed(1));
@@ -134,9 +136,19 @@ export function useMarketData() {
         fedFundsRate != null
           ? { ...fb[0], value: parseFloat((fedFundsRate - 0.125).toFixed(3)) }
           : fb[0],
-        { ...fb[1], value: y2Val, change: tdRates.y2Change, changePct: tdRates.y2Pct },
+        {
+          ...fb[1],
+          value: y2Val,
+          change: tdRates.y2Change ?? fb[1].change,
+          changePct: tdRates.y2Pct ?? fb[1].changePct,
+        },
         { ...fb[2], value: y5Val },
-        { ...fb[3], value: y10Val, change: tdRates.y10Change, changePct: tdRates.y10Pct },
+        {
+          ...fb[3],
+          value: y10Val,
+          change: tdRates.y10Change ?? fb[3].change,
+          changePct: tdRates.y10Pct ?? fb[3].changePct,
+        },
         { ...fb[4], value: y20Val },
         { ...fb[5], value: y30Val },
         tipsBreakeven != null ? { ...fb[6], value: tipsBreakeven } : fb[6],

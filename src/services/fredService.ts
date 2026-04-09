@@ -52,6 +52,32 @@ export async function getFredFedFundsRate(): Promise<number | null> {
   return fetchLatestValue('DFEDTARU');
 }
 
+export type FredTreasuryYields = {
+  y2: number | null;
+  y5: number | null;
+  y10: number | null;
+  y20: number | null;
+  y30: number | null;
+};
+
+export async function getFredTreasuryYields(): Promise<FredTreasuryYields> {
+  const [y2, y5, y10, y20, y30] = await Promise.allSettled([
+    fetchLatestValue('DGS2'),
+    fetchLatestValue('DGS5'),
+    fetchLatestValue('DGS10'),
+    fetchLatestValue('DGS20'),
+    fetchLatestValue('DGS30'),
+  ]);
+
+  return {
+    y2: y2.status === 'fulfilled' ? y2.value : null,
+    y5: y5.status === 'fulfilled' ? y5.value : null,
+    y10: y10.status === 'fulfilled' ? y10.value : null,
+    y20: y20.status === 'fulfilled' ? y20.value : null,
+    y30: y30.status === 'fulfilled' ? y30.value : null,
+  };
+}
+
 export async function getFredTipsBreakeven(): Promise<number | null> {
   return fetchLatestValue('T10YIE');
 }
