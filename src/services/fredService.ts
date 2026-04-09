@@ -133,21 +133,24 @@ export type InflationItem = {
 };
 
 async function getYoYSeries(seriesId: string): Promise<{ value: number; series: TimeSeriesPoint[]; latestDate: string }> {
-  const raw = await fetchSeries(seriesId, 36);
+  const raw = await fetchSeries(seriesId, 60);
   if (raw.length < 13) throw new Error('Insufficient data');
 
   const yoy: TimeSeriesPoint[] = raw.slice(12).map((p, i) => {
     const yearAgo = raw[i];
     const pct = yearAgo.value !== 0
-      ? parseFloat(((p.value - yearAgo.value) / yearAgo.value * 100).toFixed(1))
+      ? parseFloat(((p.value - yearAgo.value) / yearAgo.value * 100).toFixed(2))
       : 0;
     return { date: p.date, value: pct };
   });
 
+  const latest = yoy[yoy.length - 1];
+  const latestDate = latest?.date ?? '';
+
   return {
-    value: yoy[yoy.length - 1]?.value ?? 0,
-    series: yoy,
-    latestDate: raw[raw.length - 1]?.date ?? '',
+    value: latest?.value ?? 0,
+    series: yoy.slice(-24),
+    latestDate,
   };
 }
 
