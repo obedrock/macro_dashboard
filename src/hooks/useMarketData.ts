@@ -204,7 +204,7 @@ export function useMarketData() {
     setStatus('inflation', loadingStatus);
     try {
       const inflation = await getLiveInflation();
-      const latestDate = inflation[0]?.latestDataDate ?? '';
+      const latestDate = inflation[0]?.dataThrough ?? '';
 
       if (!forceRefresh && latestDate && latestDate === lastInflationDate.current) {
         setStatus('inflation', loadedStatus);

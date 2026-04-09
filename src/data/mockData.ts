@@ -94,26 +94,12 @@ export const mockMarketData: MarketData = {
     },
   ],
   inflation: [
-    {
-      label: 'CPI YoY',
-      value: 3.2,
-      series: genInflationSeries(3.2, 12),
-    },
-    {
-      label: 'Core CPI',
-      value: 3.8,
-      series: genInflationSeries(3.8, 12),
-    },
-    {
-      label: 'PCE YoY',
-      value: 2.8,
-      series: genInflationSeries(2.8, 12),
-    },
-    {
-      label: 'Core PCE',
-      value: 2.9,
-      series: genInflationSeries(2.9, 12),
-    },
+    { label: 'CPI', sublabel: 'YoY % chg · All Items', value: 3.2, mom: 0.3, series: genInflationSeries(3.2, 24), dataThrough: 'Feb 2025' },
+    { label: 'Core CPI', sublabel: 'YoY % chg · Ex Food & Energy', value: 3.8, mom: 0.4, series: genInflationSeries(3.8, 24), dataThrough: 'Feb 2025' },
+    { label: 'PCE', sublabel: 'YoY % chg · All Items', value: 2.8, mom: 0.3, series: genInflationSeries(2.8, 24), dataThrough: 'Jan 2025' },
+    { label: 'Core PCE', sublabel: 'YoY % chg · Ex Food & Energy', value: 2.9, mom: 0.3, series: genInflationSeries(2.9, 24), dataThrough: 'Jan 2025' },
+    { label: '5yr Breakeven', sublabel: '% · Market Inflation Expectation', value: 2.4, mom: null, series: genInflationSeries(2.4, 24), dataThrough: 'Apr 2025' },
+    { label: '1yr Expectation', sublabel: '% · Cleveland Fed Model', value: 2.8, mom: null, series: genInflationSeries(2.8, 24), dataThrough: 'Mar 2025' },
   ],
   yieldCurve: [
     { maturity: '1M', current: 4.32, oneMonthAgo: 4.45, oneYearAgo: 5.28 },

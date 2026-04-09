@@ -127,72 +127,125 @@ export async function getLiveCreditSpreads(): Promise<CreditItem[]> {
 
 export type InflationItem = {
   label: string;
+  sublabel: string;
   value: number;
+  mom: number | null;
   series: TimeSeriesPoint[];
-  latestDataDate?: string;
+  dataThrough: string;
 };
 
-async function getYoYSeries(seriesId: string): Promise<{ value: number; series: TimeSeriesPoint[]; latestDate: string }> {
+async function getInflationSeries(seriesId: string): Promise<{
+  yoy: number;
+  mom: number;
+  series: TimeSeriesPoint[];
+  dataThrough: string;
+}> {
   const raw = await fetchSeries(seriesId, 60);
   if (raw.length < 13) throw new Error('Insufficient data');
 
-  const yoy: TimeSeriesPoint[] = raw.slice(12).map((p, i) => {
-    const yearAgo = raw[i];
-    const pct = yearAgo.value !== 0
-      ? parseFloat(((p.value - yearAgo.value) / yearAgo.value * 100).toFixed(2))
+  const last = raw[raw.length - 1];
+  const prev = raw[raw.length - 2];
+  const yearAgo = raw[raw.length - 13];
+
+  const yoy = yearAgo && yearAgo.value !== 0
+    ? parseFloat(((last.value - yearAgo.value) / yearAgo.value * 100).toFixed(2))
+    : 0;
+
+  const mom = prev && prev.value !== 0
+    ? parseFloat(((last.value - prev.value) / prev.value * 100).toFixed(2))
+    : 0;
+
+  const yoySeries: TimeSeriesPoint[] = raw.slice(12).map((p, i) => {
+    const ya = raw[i];
+    const pct = ya && ya.value !== 0
+      ? parseFloat(((p.value - ya.value) / ya.value * 100).toFixed(2))
       : 0;
     return { date: p.date, value: pct };
   });
 
-  const latest = yoy[yoy.length - 1];
-  const latestDate = latest?.date ?? '';
+  const dataThrough = last.date;
 
-  return {
-    value: latest?.value ?? 0,
-    series: yoy.slice(-24),
-    latestDate,
-  };
+  return { yoy, mom, series: yoySeries.slice(-24), dataThrough };
+}
+
+async function getLevelSeriesWithDate(seriesId: string): Promise<{
+  value: number;
+  series: TimeSeriesPoint[];
+  dataThrough: string;
+}> {
+  const raw = await fetchSeries(seriesId, 60);
+  if (raw.length === 0) throw new Error('No data');
+  const last = raw[raw.length - 1];
+  return { value: parseFloat(last.value.toFixed(2)), series: raw.slice(-24), dataThrough: last.date };
 }
 
 export async function getLiveInflation(): Promise<InflationItem[]> {
-  try {
-    const [cpi, coreCpi, pce, corePce] = await Promise.allSettled([
-      getYoYSeries('CPIAUCSL'),
-      getYoYSeries('CPILFESL'),
-      getYoYSeries('PCEPI'),
-      getYoYSeries('PCEPILFE'),
-    ]);
+  const fb = mockMarketData.inflation;
 
-    const fb = mockMarketData.inflation;
-    return [
-      {
-        label: 'CPI YoY',
-        value: cpi.status === 'fulfilled' ? cpi.value.value : fb[0].value,
-        series: cpi.status === 'fulfilled' ? cpi.value.series : fb[0].series,
-        latestDataDate: cpi.status === 'fulfilled' ? cpi.value.latestDate : undefined,
-      },
-      {
-        label: 'Core CPI',
-        value: coreCpi.status === 'fulfilled' ? coreCpi.value.value : fb[1].value,
-        series: coreCpi.status === 'fulfilled' ? coreCpi.value.series : fb[1].series,
-        latestDataDate: coreCpi.status === 'fulfilled' ? coreCpi.value.latestDate : undefined,
-      },
-      {
-        label: 'PCE YoY',
-        value: pce.status === 'fulfilled' ? pce.value.value : fb[2].value,
-        series: pce.status === 'fulfilled' ? pce.value.series : fb[2].series,
-        latestDataDate: pce.status === 'fulfilled' ? pce.value.latestDate : undefined,
-      },
-      {
-        label: 'Core PCE',
-        value: corePce.status === 'fulfilled' ? corePce.value.value : fb[3].value,
-        series: corePce.status === 'fulfilled' ? corePce.value.series : fb[3].series,
-        latestDataDate: corePce.status === 'fulfilled' ? corePce.value.latestDate : undefined,
-      },
-    ];
-  } catch {
-    return mockMarketData.inflation;
+  const [cpi, coreCpi, pce, corePce, breakeven5y, breakeven1y] = await Promise.allSettled([
+    getInflationSeries('CPIAUCSL'),
+    getInflationSeries('CPILFESL'),
+    getInflationSeries('PCEPI'),
+    getInflationSeries('PCEPILFE'),
+    getLevelSeriesWithDate('T5YIE'),
+    getLevelSeriesWithDate('EXPINF1YR'),
+  ]);
+
+  function formatDate(d: string) {
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   }
+
+  return [
+    {
+      label: 'CPI',
+      sublabel: 'YoY % chg · All Items',
+      value: cpi.status === 'fulfilled' ? cpi.value.yoy : fb[0].value,
+      mom: cpi.status === 'fulfilled' ? cpi.value.mom : null,
+      series: cpi.status === 'fulfilled' ? cpi.value.series : fb[0].series,
+      dataThrough: cpi.status === 'fulfilled' ? formatDate(cpi.value.dataThrough) : '—',
+    },
+    {
+      label: 'Core CPI',
+      sublabel: 'YoY % chg · Ex Food & Energy',
+      value: coreCpi.status === 'fulfilled' ? coreCpi.value.yoy : fb[1].value,
+      mom: coreCpi.status === 'fulfilled' ? coreCpi.value.mom : null,
+      series: coreCpi.status === 'fulfilled' ? coreCpi.value.series : fb[1].series,
+      dataThrough: coreCpi.status === 'fulfilled' ? formatDate(coreCpi.value.dataThrough) : '—',
+    },
+    {
+      label: 'PCE',
+      sublabel: 'YoY % chg · All Items',
+      value: pce.status === 'fulfilled' ? pce.value.yoy : fb[2].value,
+      mom: pce.status === 'fulfilled' ? pce.value.mom : null,
+      series: pce.status === 'fulfilled' ? pce.value.series : fb[2].series,
+      dataThrough: pce.status === 'fulfilled' ? formatDate(pce.value.dataThrough) : '—',
+    },
+    {
+      label: 'Core PCE',
+      sublabel: 'YoY % chg · Ex Food & Energy',
+      value: corePce.status === 'fulfilled' ? corePce.value.yoy : fb[3].value,
+      mom: corePce.status === 'fulfilled' ? corePce.value.mom : null,
+      series: corePce.status === 'fulfilled' ? corePce.value.series : fb[3].series,
+      dataThrough: corePce.status === 'fulfilled' ? formatDate(corePce.value.dataThrough) : '—',
+    },
+    {
+      label: '5yr Breakeven',
+      sublabel: '% · Market Inflation Expectation',
+      value: breakeven5y.status === 'fulfilled' ? breakeven5y.value.value : 2.4,
+      mom: null,
+      series: breakeven5y.status === 'fulfilled' ? breakeven5y.value.series : [],
+      dataThrough: breakeven5y.status === 'fulfilled' ? formatDate(breakeven5y.value.dataThrough) : '—',
+    },
+    {
+      label: '1yr Expectation',
+      sublabel: '% · Cleveland Fed Model',
+      value: breakeven1y.status === 'fulfilled' ? breakeven1y.value.value : 2.8,
+      mom: null,
+      series: breakeven1y.status === 'fulfilled' ? breakeven1y.value.series : [],
+      dataThrough: breakeven1y.status === 'fulfilled' ? formatDate(breakeven1y.value.dataThrough) : '—',
+    },
+  ];
 }
 
 export type FedBalanceSheet = {

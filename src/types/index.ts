@@ -82,7 +82,7 @@ export interface MarketData {
   fx: PriceItem[];
   commodities: PriceItem[];
   credit: { label: string; value: number; change: number; series: TimeSeriesPoint[] }[];
-  inflation: { label: string; value: number; series: TimeSeriesPoint[] }[];
+  inflation: { label: string; sublabel: string; value: number; mom: number | null; series: TimeSeriesPoint[]; dataThrough: string }[];
   yieldCurve: YieldCurveData[];
   news: NewsItem[];
   fomc: FomcData;
