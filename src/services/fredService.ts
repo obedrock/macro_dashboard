@@ -1,5 +1,5 @@
 import { cache, TTL } from './cache';
-import { TimeSeriesPoint, YieldCurveData, PriceItem } from '../types';
+import { TimeSeriesPoint, YieldCurveData } from '../types';
 import { mockMarketData } from '../data/mockData';
 
 const FRED_BASE = 'https://api.stlouisfed.org/fred';
@@ -14,10 +14,7 @@ type FredResponse = {
   observations: FredObservation[];
 };
 
-async function fetchSeries(
-  seriesId: string,
-  limit = 365
-): Promise<TimeSeriesPoint[]> {
+async function fetchSeries(seriesId: string, limit = 365): Promise<TimeSeriesPoint[]> {
   const cacheKey = `fred:${seriesId}:${limit}`;
   const cached = cache.get<TimeSeriesPoint[]>(cacheKey);
   if (cached) return cached;
@@ -59,13 +56,10 @@ export type CreditItem = {
 };
 
 export async function getLiveCreditSpreads(): Promise<CreditItem[]> {
-  const HY_SERIES = 'BAMLH0A0HYM2';
-  const IG_SERIES = 'BAMLC0A0CM';
-
   try {
     const [hySeries, igSeries] = await Promise.all([
-      fetchSeries(HY_SERIES, 365),
-      fetchSeries(IG_SERIES, 365),
+      fetchSeries('BAMLH0A0HYM2', 365),
+      fetchSeries('BAMLC0A0CM', 365),
     ]);
 
     const hyLast = hySeries[hySeries.length - 1]?.value ?? mockMarketData.credit[0].value;
@@ -97,24 +91,29 @@ export type InflationItem = {
   label: string;
   value: number;
   series: TimeSeriesPoint[];
+  latestDataDate?: string;
 };
 
+async function getYoYSeries(seriesId: string): Promise<{ value: number; series: TimeSeriesPoint[]; latestDate: string }> {
+  const raw = await fetchSeries(seriesId, 36);
+  if (raw.length < 13) throw new Error('Insufficient data');
+
+  const yoy: TimeSeriesPoint[] = raw.slice(12).map((p, i) => {
+    const yearAgo = raw[i];
+    const pct = yearAgo.value !== 0
+      ? parseFloat(((p.value - yearAgo.value) / yearAgo.value * 100).toFixed(1))
+      : 0;
+    return { date: p.date, value: pct };
+  });
+
+  return {
+    value: yoy[yoy.length - 1]?.value ?? 0,
+    series: yoy,
+    latestDate: raw[raw.length - 1]?.date ?? '',
+  };
+}
+
 export async function getLiveInflation(): Promise<InflationItem[]> {
-  async function getYoYSeries(seriesId: string): Promise<{ value: number; series: TimeSeriesPoint[] }> {
-    const raw = await fetchSeries(seriesId, 36);
-    if (raw.length < 13) throw new Error('Insufficient data');
-
-    const yoy: TimeSeriesPoint[] = raw.slice(12).map((p, i) => {
-      const yearAgo = raw[i];
-      const pct = yearAgo.value !== 0
-        ? parseFloat(((p.value - yearAgo.value) / yearAgo.value * 100).toFixed(1))
-        : 0;
-      return { date: p.date, value: pct };
-    });
-
-    return { value: yoy[yoy.length - 1]?.value ?? 0, series: yoy };
-  }
-
   try {
     const [cpi, coreCpi, pce, corePce] = await Promise.allSettled([
       getYoYSeries('CPIAUCSL'),
@@ -125,138 +124,123 @@ export async function getLiveInflation(): Promise<InflationItem[]> {
 
     const fb = mockMarketData.inflation;
     return [
-      { label: 'CPI YoY', value: cpi.status === 'fulfilled' ? cpi.value.value : fb[0].value, series: cpi.status === 'fulfilled' ? cpi.value.series : fb[0].series },
-      { label: 'Core CPI', value: coreCpi.status === 'fulfilled' ? coreCpi.value.value : fb[1].value, series: coreCpi.status === 'fulfilled' ? coreCpi.value.series : fb[1].series },
-      { label: 'PCE YoY', value: pce.status === 'fulfilled' ? pce.value.value : fb[2].value, series: pce.status === 'fulfilled' ? pce.value.series : fb[2].series },
-      { label: 'Core PCE', value: corePce.status === 'fulfilled' ? corePce.value.value : fb[3].value, series: corePce.status === 'fulfilled' ? corePce.value.series : fb[3].series },
+      {
+        label: 'CPI YoY',
+        value: cpi.status === 'fulfilled' ? cpi.value.value : fb[0].value,
+        series: cpi.status === 'fulfilled' ? cpi.value.series : fb[0].series,
+        latestDataDate: cpi.status === 'fulfilled' ? cpi.value.latestDate : undefined,
+      },
+      {
+        label: 'Core CPI',
+        value: coreCpi.status === 'fulfilled' ? coreCpi.value.value : fb[1].value,
+        series: coreCpi.status === 'fulfilled' ? coreCpi.value.series : fb[1].series,
+        latestDataDate: coreCpi.status === 'fulfilled' ? coreCpi.value.latestDate : undefined,
+      },
+      {
+        label: 'PCE YoY',
+        value: pce.status === 'fulfilled' ? pce.value.value : fb[2].value,
+        series: pce.status === 'fulfilled' ? pce.value.series : fb[2].series,
+        latestDataDate: pce.status === 'fulfilled' ? pce.value.latestDate : undefined,
+      },
+      {
+        label: 'Core PCE',
+        value: corePce.status === 'fulfilled' ? corePce.value.value : fb[3].value,
+        series: corePce.status === 'fulfilled' ? corePce.value.series : fb[3].series,
+        latestDataDate: corePce.status === 'fulfilled' ? corePce.value.latestDate : undefined,
+      },
     ];
   } catch {
     return mockMarketData.inflation;
   }
 }
 
-export interface FredMarketSnapshot {
-  vix: number | null;
-  dgs10: number | null;
-  dgs5: number | null;
-  dgs30: number | null;
-  dgs2: number | null;
-  wti: number | null;
-  brent: number | null;
-  natgas: number | null;
-  fedFundsUpper: number | null;
+export async function getFredFedFundsRate(): Promise<number | null> {
+  return fetchLatestValue('DFEDTARU');
 }
 
-export async function getFredMarketSnapshot(): Promise<FredMarketSnapshot> {
-  const cacheKey = 'fred:market:snapshot';
-  const cached = cache.get<FredMarketSnapshot>(cacheKey);
+export async function getFredTreasuryYields(): Promise<{
+  dgs2: number | null;
+  dgs5: number | null;
+  dgs10: number | null;
+  dgs30: number | null;
+  dgs1mo: number | null;
+  dgs3mo: number | null;
+  dgs6mo: number | null;
+  dgs1: number | null;
+  dgs3: number | null;
+  dgs7: number | null;
+  dgs20: number | null;
+  vix: number | null;
+}> {
+  const cacheKey = 'fred:treasury:yields';
+  const cached = cache.get<ReturnType<typeof getFredTreasuryYields> extends Promise<infer T> ? T : never>(cacheKey);
   if (cached) return cached;
 
-  const [vix, dgs10, dgs5, dgs30, dgs2, wti, brent, natgas, fedFunds] = await Promise.allSettled([
-    fetchLatestValue('VIXCLS'),
-    fetchLatestValue('DGS10'),
-    fetchLatestValue('DGS5'),
-    fetchLatestValue('DGS30'),
+  const [dgs2, dgs5, dgs10, dgs30, dgs1mo, dgs3mo, dgs6mo, dgs1, dgs3, dgs7, dgs20, vix] = await Promise.allSettled([
     fetchLatestValue('DGS2'),
-    fetchLatestValue('DCOILWTICO'),
-    fetchLatestValue('DCOILBRENTEU'),
-    fetchLatestValue('DHHNGSP'),
-    fetchLatestValue('DFEDTARU'),
+    fetchLatestValue('DGS5'),
+    fetchLatestValue('DGS10'),
+    fetchLatestValue('DGS30'),
+    fetchLatestValue('DGS1MO'),
+    fetchLatestValue('DGS3MO'),
+    fetchLatestValue('DGS6MO'),
+    fetchLatestValue('DGS1'),
+    fetchLatestValue('DGS3'),
+    fetchLatestValue('DGS7'),
+    fetchLatestValue('DGS20'),
+    fetchLatestValue('VIXCLS'),
   ]);
 
-  const snapshot: FredMarketSnapshot = {
-    vix: vix.status === 'fulfilled' ? vix.value : null,
-    dgs10: dgs10.status === 'fulfilled' ? dgs10.value : null,
-    dgs5: dgs5.status === 'fulfilled' ? dgs5.value : null,
-    dgs30: dgs30.status === 'fulfilled' ? dgs30.value : null,
+  const result = {
     dgs2: dgs2.status === 'fulfilled' ? dgs2.value : null,
-    wti: wti.status === 'fulfilled' ? wti.value : null,
-    brent: brent.status === 'fulfilled' ? brent.value : null,
-    natgas: natgas.status === 'fulfilled' ? natgas.value : null,
-    fedFundsUpper: fedFunds.status === 'fulfilled' ? fedFunds.value : null,
+    dgs5: dgs5.status === 'fulfilled' ? dgs5.value : null,
+    dgs10: dgs10.status === 'fulfilled' ? dgs10.value : null,
+    dgs30: dgs30.status === 'fulfilled' ? dgs30.value : null,
+    dgs1mo: dgs1mo.status === 'fulfilled' ? dgs1mo.value : null,
+    dgs3mo: dgs3mo.status === 'fulfilled' ? dgs3mo.value : null,
+    dgs6mo: dgs6mo.status === 'fulfilled' ? dgs6mo.value : null,
+    dgs1: dgs1.status === 'fulfilled' ? dgs1.value : null,
+    dgs3: dgs3.status === 'fulfilled' ? dgs3.value : null,
+    dgs7: dgs7.status === 'fulfilled' ? dgs7.value : null,
+    dgs20: dgs20.status === 'fulfilled' ? dgs20.value : null,
+    vix: vix.status === 'fulfilled' ? vix.value : null,
   };
 
-  cache.set(cacheKey, snapshot, TTL.FRED);
-  return snapshot;
+  cache.set(cacheKey, result, TTL.FRED);
+  return result;
 }
 
-export function applyFredSnapshot(
-  snapshot: FredMarketSnapshot,
-  currentData: {
-    ribbon: PriceItem[];
-    rates: PriceItem[];
-    equities: PriceItem[];
-    commodities: PriceItem[];
-  }
-): {
-  ribbon: PriceItem[];
-  rates: PriceItem[];
-  equities: PriceItem[];
-  commodities: PriceItem[];
-} {
-  const ribbon = [...currentData.ribbon];
-  const rates = [...currentData.rates];
-  const equities = [...currentData.equities];
-  const commodities = [...currentData.commodities];
-
-  if (snapshot.dgs10 != null) {
-    ribbon[1] = { ...ribbon[1], value: snapshot.dgs10 };
-    rates[3] = { ...rates[3], value: snapshot.dgs10 };
-  }
-  if (snapshot.vix != null) {
-    ribbon[5] = { ...ribbon[5], value: snapshot.vix };
-    equities[4] = { ...equities[4], value: snapshot.vix };
-  }
-  if (snapshot.wti != null) {
-    ribbon[3] = { ...ribbon[3], value: snapshot.wti };
-    commodities[0] = { ...commodities[0], value: snapshot.wti };
-  }
-  if (snapshot.brent != null) {
-    commodities[1] = { ...commodities[1], value: snapshot.brent };
-  }
-  if (snapshot.natgas != null) {
-    commodities[2] = { ...commodities[2], value: snapshot.natgas };
-  }
-  if (snapshot.dgs5 != null) {
-    rates[2] = { ...rates[2], value: snapshot.dgs5 };
-  }
-  if (snapshot.dgs2 != null) {
-    rates[1] = { ...rates[1], value: snapshot.dgs2 };
-    rates[6] = {
-      ...rates[6],
-      value: snapshot.dgs10 != null
-        ? parseFloat(((snapshot.dgs10 - snapshot.dgs2) * 100).toFixed(1))
-        : rates[6].value,
-    };
-  }
-  if (snapshot.dgs30 != null) {
-    rates[4] = { ...rates[4], value: snapshot.dgs30 };
-  }
-  if (snapshot.fedFundsUpper != null) {
-    const lo = parseFloat((snapshot.fedFundsUpper - 0.25).toFixed(2));
-    const hi = snapshot.fedFundsUpper;
-    rates[0] = {
-      ...rates[0],
-      value: parseFloat(((lo + hi) / 2).toFixed(3)),
-    };
-  }
-
-  return { ribbon, rates, equities, commodities };
-}
-
-const YIELD_CURVE_FRED_SERIES: { maturity: string; seriesId: string }[] = [
-  { maturity: '1M', seriesId: 'DGS1MO' },
-  { maturity: '3M', seriesId: 'DGS3MO' },
-  { maturity: '6M', seriesId: 'DGS6MO' },
-  { maturity: '1Y', seriesId: 'DGS1' },
-  { maturity: '2Y', seriesId: 'DGS2' },
-  { maturity: '3Y', seriesId: 'DGS3' },
-  { maturity: '5Y', seriesId: 'DGS5' },
-  { maturity: '7Y', seriesId: 'DGS7' },
-  { maturity: '10Y', seriesId: 'DGS10' },
-  { maturity: '20Y', seriesId: 'DGS20' },
-  { maturity: '30Y', seriesId: 'DGS30' },
+const YIELD_CURVE_MATURITIES = [
+  { maturity: '1M', key: 'dgs1mo' as const },
+  { maturity: '3M', key: 'dgs3mo' as const },
+  { maturity: '6M', key: 'dgs6mo' as const },
+  { maturity: '1Y', key: 'dgs1' as const },
+  { maturity: '2Y', key: 'dgs2' as const },
+  { maturity: '3Y', key: 'dgs3' as const },
+  { maturity: '5Y', key: 'dgs5' as const },
+  { maturity: '7Y', key: 'dgs7' as const },
+  { maturity: '10Y', key: 'dgs10' as const },
+  { maturity: '20Y', key: 'dgs20' as const },
+  { maturity: '30Y', key: 'dgs30' as const },
 ];
+
+export async function getFredYieldCurve(): Promise<YieldCurveData[] | null> {
+  try {
+    const yields = await getFredTreasuryYields();
+    return YIELD_CURVE_MATURITIES.map(({ maturity, key }) => {
+      const current = yields[key];
+      const fb = mockMarketData.yieldCurve.find(p => p.maturity === maturity) ?? mockMarketData.yieldCurve[0];
+      return {
+        maturity,
+        current: current ?? fb.current,
+        oneMonthAgo: fb.oneMonthAgo,
+        oneYearAgo: fb.oneYearAgo,
+      };
+    });
+  } catch {
+    return null;
+  }
+}
 
 function isoDateOffset(days: number): string {
   const d = new Date();
@@ -294,34 +278,21 @@ async function fetchYieldOnDate(seriesId: string, targetDate: string): Promise<n
   return value;
 }
 
-export async function getFredYieldCurve(): Promise<YieldCurveData[] | null> {
-  try {
-    const results = await Promise.allSettled(
-      YIELD_CURVE_FRED_SERIES.map(({ maturity, seriesId }) =>
-        fetchLatestValue(seriesId).then(v => ({ maturity, value: v }))
-      )
-    );
+const YIELD_CURVE_FRED_SERIES: { maturity: string; seriesId: string }[] = [
+  { maturity: '1M', seriesId: 'DGS1MO' },
+  { maturity: '3M', seriesId: 'DGS3MO' },
+  { maturity: '6M', seriesId: 'DGS6MO' },
+  { maturity: '1Y', seriesId: 'DGS1' },
+  { maturity: '2Y', seriesId: 'DGS2' },
+  { maturity: '3Y', seriesId: 'DGS3' },
+  { maturity: '5Y', seriesId: 'DGS5' },
+  { maturity: '7Y', seriesId: 'DGS7' },
+  { maturity: '10Y', seriesId: 'DGS10' },
+  { maturity: '20Y', seriesId: 'DGS20' },
+  { maturity: '30Y', seriesId: 'DGS30' },
+];
 
-    const points: YieldCurveData[] = YIELD_CURVE_FRED_SERIES.map(({ maturity }, i) => {
-      const r = results[i];
-      const current = r.status === 'fulfilled' && r.value.value != null ? r.value.value : null;
-      const fb = mockMarketData.yieldCurve.find(p => p.maturity === maturity) ?? mockMarketData.yieldCurve[0];
-      return {
-        maturity,
-        current: current ?? fb.current,
-        oneMonthAgo: fb.oneMonthAgo,
-        oneYearAgo: fb.oneYearAgo,
-      };
-    });
-    return points;
-  } catch {
-    return null;
-  }
-}
-
-export async function getFredYieldCurveOverlays(
-  currentCurve: YieldCurveData[]
-): Promise<YieldCurveData[]> {
+export async function getFredYieldCurveOverlays(currentCurve: YieldCurveData[]): Promise<YieldCurveData[]> {
   try {
     const oneMonthAgoDate = isoDateOffset(-30);
     const oneYearAgoDate = isoDateOffset(-365);

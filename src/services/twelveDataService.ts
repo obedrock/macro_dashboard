@@ -212,11 +212,12 @@ export async function getTwelveFX(): Promise<PriceItem[]> {
 }
 
 export async function getTwelveCommodities(): Promise<PriceItem[]> {
-  const [wti, gold, silver, copper] = await Promise.allSettled([
+  const [wti, gold, silver, copper, natgas] = await Promise.allSettled([
     fetchSingleQuote('CL1:COM'),
     fetchSingleQuote('XAU/USD'),
     fetchSingleQuote('XAG/USD'),
     fetchSingleQuote('HG1:COM'),
+    fetchSingleQuote('GAS/USD'),
   ]);
 
   const fb = mockMarketData.commodities;
@@ -225,11 +226,13 @@ export async function getTwelveCommodities(): Promise<PriceItem[]> {
   const goldQ = gold.status === 'fulfilled' ? gold.value : null;
   const silverQ = silver.status === 'fulfilled' ? silver.value : null;
   const copperQ = copper.status === 'fulfilled' ? copper.value : null;
+  const natgasQ = natgas.status === 'fulfilled' ? natgas.value : null;
 
   const wtiItem = wtiQ ? { ...toItem(wtiQ, fb[0], 'WTI Crude'), prefix: '$' } : fb[0];
   const goldItem = goldQ ? { ...toItem(goldQ, fb[3], 'Gold'), prefix: '$' } : fb[3];
   const silverItem = silverQ ? { ...toItem(silverQ, fb[4], 'Silver'), prefix: '$' } : fb[4];
   const copperItem = copperQ ? { ...toItem(copperQ, fb[5], 'Copper'), prefix: '$' } : fb[5];
+  const natgasItem = natgasQ ? { ...toItem(natgasQ, fb[2], 'Natural Gas'), prefix: '$' } : fb[2];
 
   const brentItem = wtiQ
     ? {
@@ -240,7 +243,7 @@ export async function getTwelveCommodities(): Promise<PriceItem[]> {
       }
     : fb[1];
 
-  return [wtiItem, brentItem, fb[2], goldItem, silverItem, copperItem];
+  return [wtiItem, brentItem, natgasItem, goldItem, silverItem, copperItem];
 }
 
 export async function getTwelveRates(): Promise<PriceItem[]> {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MarketData, WidgetStatuses, WidgetStatus } from '../types';
+import { MarketData, WidgetStatuses, WidgetStatus, PriceItem } from '../types';
 import { mockMarketData } from '../data/mockData';
 import {
   getTwelveEquities,
@@ -17,16 +17,33 @@ import {
 import {
   getLiveCreditSpreads,
   getLiveInflation,
-  getFredYieldCurveOverlays,
-  getFredMarketSnapshot,
-  applyFredSnapshot,
+  getFredFedFundsRate,
+  getFredTreasuryYields,
   getFredYieldCurve,
+  getFredYieldCurveOverlays,
 } from '../services/fredService';
 
-const REST_REFRESH_MS = 60 * 1000;
+const TWELVE_REST_REFRESH_MS = 60 * 1000;
 const NEWS_REFRESH_MS = 5 * 60 * 1000;
-const CALENDAR_REFRESH_MS = 6 * 60 * 60 * 1000;
-const FRED_REFRESH_MS = 24 * 60 * 60 * 1000;
+const CALENDAR_REFRESH_MS = 2 * 60 * 60 * 1000;
+const INFLATION_CHECK_MS = 24 * 60 * 60 * 1000;
+const FRED_YIELDS_REFRESH_MS = 24 * 60 * 60 * 1000;
+
+function msUntilNextCalendarRefresh(): number {
+  const now = new Date();
+  const etOffset = -5 * 60;
+  const utcNow = now.getTime() + now.getTimezoneOffset() * 60000;
+  const etNow = new Date(utcNow + etOffset * 60000);
+
+  const next835 = new Date(etNow);
+  next835.setHours(8, 35, 0, 0);
+  if (etNow >= next835) next835.setDate(next835.getDate() + 1);
+
+  const msTo835 = next835.getTime() - etNow.getTime();
+  const msToTwoHour = CALENDAR_REFRESH_MS - (etNow.getTime() % CALENDAR_REFRESH_MS);
+
+  return Math.min(msTo835, msToTwoHour);
+}
 
 const loadingStatus: WidgetStatus = { state: 'loading' };
 const loadedStatus: WidgetStatus = { state: 'loaded' };
@@ -52,6 +69,7 @@ export function useMarketData() {
   const [statuses, setStatuses] = useState<WidgetStatuses>(DEFAULT_STATUSES);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const ribbonBase = useRef<MarketData['ribbon']>(mockMarketData.ribbon);
+  const lastInflationDate = useRef<string>('');
 
   function setStatus(key: keyof WidgetStatuses, status: WidgetStatus) {
     setStatuses(prev => ({ ...prev, [key]: status }));
@@ -90,51 +108,70 @@ export function useMarketData() {
     }
   }, []);
 
-  const fetchRates = useCallback(async () => {
+  const fetchRatesAndYields = useCallback(async () => {
     setStatus('rates', loadingStatus);
-    try {
-      const rates = await getTwelveRates();
-      setData(prev => ({ ...prev, rates }));
-      setStatus('rates', loadedStatus);
-    } catch (e) {
-      setStatus('rates', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
-    }
-  }, []);
-
-  const fetchFredSnapshot = useCallback(async () => {
-    try {
-      const snapshot = await getFredMarketSnapshot();
-      setData(prev => {
-        const updated = applyFredSnapshot(snapshot, {
-          ribbon: prev.ribbon,
-          rates: prev.rates,
-          equities: prev.equities,
-          commodities: prev.commodities,
-        });
-
-        ribbonBase.current = updated.ribbon;
-
-        return {
-          ...prev,
-          ribbon: updated.ribbon,
-          rates: updated.rates,
-          equities: updated.equities,
-          commodities: updated.commodities,
-        };
-      });
-    } catch {}
-  }, []);
-
-  const fetchYields = useCallback(async () => {
     setStatus('yields', loadingStatus);
     try {
+      const [tdRates, fredYields] = await Promise.all([
+        getTwelveRates(),
+        getFredTreasuryYields(),
+      ]);
+
+      const fedFundsRate = await getFredFedFundsRate();
+
+      const rates: PriceItem[] = [...tdRates];
+
+      if (fedFundsRate != null) {
+        const lo = parseFloat((fedFundsRate - 0.25).toFixed(2));
+        const hi = fedFundsRate;
+        rates[0] = { ...rates[0], value: parseFloat(((lo + hi) / 2).toFixed(3)) };
+      }
+      if (fredYields.dgs2 != null) {
+        rates[1] = { ...rates[1], value: fredYields.dgs2 };
+      }
+      if (fredYields.dgs5 != null) {
+        rates[2] = { ...rates[2], value: fredYields.dgs5 };
+      }
+      if (fredYields.dgs10 != null) {
+        rates[3] = { ...rates[3], value: fredYields.dgs10 };
+      }
+      if (fredYields.dgs30 != null) {
+        rates[4] = { ...rates[4], value: fredYields.dgs30 };
+      }
+      if (fredYields.dgs10 != null && fredYields.dgs2 != null) {
+        rates[6] = {
+          ...rates[6],
+          value: parseFloat(((fredYields.dgs10 - fredYields.dgs2) * 100).toFixed(1)),
+        };
+      }
+
+      const ribbon = [...ribbonBase.current];
+      if (fredYields.dgs10 != null) ribbon[1] = { ...ribbon[1], value: fredYields.dgs10 };
+      if (fredYields.vix != null) ribbon[5] = { ...ribbon[5], value: fredYields.vix };
+      ribbonBase.current = ribbon;
+
+      const equitiesVix = fredYields.vix;
+
+      setData(prev => ({
+        ...prev,
+        rates,
+        ribbon,
+        equities: equitiesVix != null
+          ? prev.equities.map((e, i) => i === 4 ? { ...e, value: equitiesVix } : e)
+          : prev.equities,
+      }));
+
       const fredCurve = await getFredYieldCurve();
       const baseCurve = fredCurve ?? mockMarketData.yieldCurve;
       const overlaid = await getFredYieldCurveOverlays(baseCurve).catch(() => baseCurve);
       setData(prev => ({ ...prev, yieldCurve: overlaid }));
+
+      setStatus('rates', loadedStatus);
       setStatus('yields', loadedStatus);
     } catch (e) {
-      setStatus('yields', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
+      const msg = e instanceof Error ? e.message : 'Failed to load';
+      setStatus('rates', errorStatus(msg));
+      setStatus('yields', errorStatus(msg));
     }
   }, []);
 
@@ -149,10 +186,18 @@ export function useMarketData() {
     }
   }, []);
 
-  const fetchInflation = useCallback(async () => {
+  const fetchInflation = useCallback(async (forceRefresh = false) => {
     setStatus('inflation', loadingStatus);
     try {
       const inflation = await getLiveInflation();
+      const latestDate = inflation[0]?.latestDataDate ?? '';
+
+      if (!forceRefresh && latestDate && latestDate === lastInflationDate.current) {
+        setStatus('inflation', loadedStatus);
+        return;
+      }
+
+      lastInflationDate.current = latestDate;
       setData(prev => ({ ...prev, inflation }));
       setStatus('inflation', loadedStatus);
     } catch (e) {
@@ -194,20 +239,20 @@ export function useMarketData() {
       fetchEquities(),
       fetchFX(),
       fetchCommodities(),
-      fetchRates(),
+      fetchRatesAndYields(),
     ]);
     setLastUpdated(new Date());
-  }, [fetchEquities, fetchFX, fetchCommodities, fetchRates]);
+  }, [fetchEquities, fetchFX, fetchCommodities, fetchRatesAndYields]);
 
   useEffect(() => {
     setStatus('ribbon', loadingStatus);
     const unsubscribe = subscribeWebSocket((update) => {
       setData(prev => {
-        const newRibbon = buildRibbonFromWs(ribbonBase.current);
         if (update.symbol === 'SPY' || update.symbol === 'CL1:COM' || update.symbol === 'XAU/USD') {
+          const newRibbon = buildRibbonFromWs(ribbonBase.current);
           setStatus('ribbon', loadedStatus);
           ribbonBase.current = newRibbon;
-          return { ...prev, ribbon: newRibbon, lastUpdated: new Date() };
+          return { ...prev, ribbon: newRibbon };
         }
         return prev;
       });
@@ -228,55 +273,61 @@ export function useMarketData() {
       fetchEquities(),
       fetchFX(),
       fetchCommodities(),
-      fetchRates(),
+      fetchRatesAndYields(),
       fetchNews(),
       fetchCalendar(),
+      fetchCredit(),
     ]).then(() => setLastUpdated(new Date()));
 
-    fetchFredSnapshot();
-    fetchYields();
-    fetchCredit();
-    fetchInflation();
+    fetchInflation(true);
 
     const restInterval = setInterval(() => {
       fetchEquities();
       fetchFX();
       fetchCommodities();
-      fetchRates();
       setLastUpdated(new Date());
-    }, REST_REFRESH_MS);
+    }, TWELVE_REST_REFRESH_MS);
 
     const newsInterval = setInterval(fetchNews, NEWS_REFRESH_MS);
-    const calendarInterval = setInterval(fetchCalendar, CALENDAR_REFRESH_MS);
-    const fredInterval = setInterval(() => {
-      fetchFredSnapshot();
-      fetchCredit();
-      fetchInflation();
-      fetchYields();
-    }, FRED_REFRESH_MS);
+
+    const fredYieldsInterval = setInterval(fetchRatesAndYields, FRED_YIELDS_REFRESH_MS);
+
+    const inflationInterval = setInterval(() => fetchInflation(false), INFLATION_CHECK_MS);
+
+    let calendarTimer: ReturnType<typeof setTimeout>;
+    function scheduleCalendar() {
+      const delay = msUntilNextCalendarRefresh();
+      calendarTimer = setTimeout(() => {
+        fetchCalendar();
+        calendarTimer = setInterval(fetchCalendar, CALENDAR_REFRESH_MS);
+      }, delay);
+    }
+    scheduleCalendar();
 
     return () => {
       clearInterval(restInterval);
       clearInterval(newsInterval);
-      clearInterval(calendarInterval);
-      clearInterval(fredInterval);
+      clearInterval(fredYieldsInterval);
+      clearInterval(inflationInterval);
+      clearTimeout(calendarTimer);
+      clearInterval(calendarTimer);
     };
-  }, [fetchEquities, fetchFX, fetchCommodities, fetchRates, fetchNews, fetchCalendar, fetchFredSnapshot, fetchYields, fetchCredit, fetchInflation]);
+  }, [fetchEquities, fetchFX, fetchCommodities, fetchRatesAndYields, fetchNews, fetchCalendar, fetchCredit, fetchInflation]);
 
   const retryWidget = useCallback((key: keyof WidgetStatuses) => {
     switch (key) {
       case 'equities': fetchEquities(); break;
       case 'fx': fetchFX(); break;
       case 'commodities': fetchCommodities(); break;
-      case 'rates': fetchRates(); break;
-      case 'yields': fetchYields(); break;
+      case 'rates': fetchRatesAndYields(); break;
+      case 'yields': fetchRatesAndYields(); break;
       case 'credit': fetchCredit(); break;
-      case 'inflation': fetchInflation(); break;
+      case 'inflation': fetchInflation(true); break;
       case 'news': fetchNews(); break;
       case 'calendar': fetchCalendar(); break;
       default: break;
     }
-  }, [fetchEquities, fetchFX, fetchCommodities, fetchRates, fetchYields, fetchCredit, fetchInflation, fetchNews, fetchCalendar]);
+  }, [fetchEquities, fetchFX, fetchCommodities, fetchRatesAndYields, fetchCredit, fetchInflation, fetchNews, fetchCalendar]);
 
   const loading = Object.values(statuses).some(s => s.state === 'loading');
 
