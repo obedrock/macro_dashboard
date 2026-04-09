@@ -56,34 +56,8 @@ export async function getFredTipsBreakeven(): Promise<number | null> {
   return fetchLatestValue('T10YIE');
 }
 
-export type FredYieldCurrents = {
-  dgs5: number | null;
-  dgs10: number | null;
-  dgs30: number | null;
-  vix: number | null;
-};
-
-export async function getFredYieldCurrents(): Promise<FredYieldCurrents> {
-  const cacheKey = 'fred:yield:currents';
-  const cached = cache.get<FredYieldCurrents>(cacheKey);
-  if (cached) return cached;
-
-  const [dgs5, dgs10, dgs30, vix] = await Promise.allSettled([
-    fetchLatestValue('DGS5'),
-    fetchLatestValue('DGS10'),
-    fetchLatestValue('DGS30'),
-    fetchLatestValue('VIXCLS'),
-  ]);
-
-  const result: FredYieldCurrents = {
-    dgs5: dgs5.status === 'fulfilled' ? dgs5.value : null,
-    dgs10: dgs10.status === 'fulfilled' ? dgs10.value : null,
-    dgs30: dgs30.status === 'fulfilled' ? dgs30.value : null,
-    vix: vix.status === 'fulfilled' ? vix.value : null,
-  };
-
-  cache.set(cacheKey, result, TTL.FRED);
-  return result;
+export async function getFredVix(): Promise<number | null> {
+  return fetchLatestValue('VIXCLS');
 }
 
 export type CreditItem = {

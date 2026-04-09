@@ -18,7 +18,7 @@ import {
   getLiveCreditSpreads,
   getLiveInflation,
   getFredFedFundsRate,
-  getFredYieldCurrents,
+  getFredVix,
   getFredTipsBreakeven,
   getFredYieldCurve,
   getFredYieldCurveOverlays,
@@ -112,19 +112,19 @@ export function useMarketData() {
   const fetchRates = useCallback(async () => {
     setStatus('rates', loadingStatus);
     try {
-      const [tdY2, fredYields, fedFundsRate, tipsBreakeven] = await Promise.all([
+      const [tdRates, fedFundsRate, tipsBreakeven, vix] = await Promise.all([
         getTwelveRates(),
-        getFredYieldCurrents(),
         getFredFedFundsRate(),
         getFredTipsBreakeven(),
+        getFredVix(),
       ]);
 
       const fb = mockMarketData.rates;
 
-      const y2Val = tdY2.y2Val;
-      const y5Val = fredYields.dgs5 ?? fb[2].value;
-      const y10Val = fredYields.dgs10 ?? fb[3].value;
-      const y30Val = fredYields.dgs30 ?? fb[4].value;
+      const y2Val = tdRates.y2Val;
+      const y5Val = tdRates.y5Val ?? fb[2].value;
+      const y10Val = tdRates.y10Val ?? fb[3].value;
+      const y30Val = tdRates.y30Val ?? fb[4].value;
 
       const spread2s10s = parseFloat(((y10Val - y2Val) * 100).toFixed(1));
       const spread2s30s = parseFloat(((y30Val - y2Val) * 100).toFixed(1));
@@ -133,9 +133,9 @@ export function useMarketData() {
         fedFundsRate != null
           ? { ...fb[0], value: parseFloat((fedFundsRate - 0.125).toFixed(3)) }
           : fb[0],
-        { ...fb[1], value: y2Val, change: tdY2.y2Change, changePct: tdY2.y2Pct },
+        { ...fb[1], value: y2Val, change: tdRates.y2Change, changePct: tdRates.y2Pct },
         { ...fb[2], value: y5Val },
-        { ...fb[3], value: y10Val },
+        { ...fb[3], value: y10Val, change: tdRates.y10Change, changePct: tdRates.y10Pct },
         { ...fb[4], value: y30Val },
         tipsBreakeven != null ? { ...fb[5], value: tipsBreakeven } : fb[5],
         { ...fb[6], value: spread2s10s },
@@ -144,15 +144,15 @@ export function useMarketData() {
 
       const ribbon = [...ribbonBase.current];
       ribbon[1] = { ...ribbon[1], value: y10Val };
-      if (fredYields.vix != null) ribbon[5] = { ...ribbon[5], value: fredYields.vix };
+      if (vix != null) ribbon[5] = { ...ribbon[5], value: vix };
       ribbonBase.current = ribbon;
 
       setData(prev => ({
         ...prev,
         rates,
         ribbon,
-        equities: fredYields.vix != null
-          ? prev.equities.map((e, i) => i === 4 ? { ...e, value: fredYields.vix! } : e)
+        equities: vix != null
+          ? prev.equities.map((e, i) => i === 4 ? { ...e, value: vix } : e)
           : prev.equities,
       }));
 
