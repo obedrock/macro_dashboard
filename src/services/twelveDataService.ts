@@ -254,14 +254,16 @@ export type TwelveRatesResult = {
   y10Val: number | null;
   y10Change: number;
   y10Pct: number;
+  y20Val: number | null;
   y30Val: number | null;
 };
 
 export async function getTwelveRates(): Promise<TwelveRatesResult> {
-  const [y2Q, y5Q, y10Q, y30Q] = await Promise.allSettled([
+  const [y2Q, y5Q, y10Q, y20Q, y30Q] = await Promise.allSettled([
     fetchSingleQuote('US2Y'),
     fetchSingleQuote('US5Y'),
     fetchSingleQuote('US10Y'),
+    fetchSingleQuote('US20Y'),
     fetchSingleQuote('US30Y'),
   ]);
 
@@ -270,6 +272,7 @@ export async function getTwelveRates(): Promise<TwelveRatesResult> {
   const y2 = y2Q.status === 'fulfilled' ? y2Q.value : null;
   const y5 = y5Q.status === 'fulfilled' ? y5Q.value : null;
   const y10 = y10Q.status === 'fulfilled' ? y10Q.value : null;
+  const y20 = y20Q.status === 'fulfilled' ? y20Q.value : null;
   const y30 = y30Q.status === 'fulfilled' ? y30Q.value : null;
 
   return {
@@ -280,6 +283,7 @@ export async function getTwelveRates(): Promise<TwelveRatesResult> {
     y10Val: y10 ? parseFloat(parseFloat(y10.close).toFixed(3)) : null,
     y10Change: y10 ? parseFloat(y10.change) : fb[3].change,
     y10Pct: y10 ? parseFloat(y10.percent_change) : fb[3].changePct,
+    y20Val: y20 ? parseFloat(parseFloat(y20.close).toFixed(3)) : null,
     y30Val: y30 ? parseFloat(parseFloat(y30.close).toFixed(3)) : null,
   };
 }

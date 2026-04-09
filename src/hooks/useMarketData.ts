@@ -124,7 +124,8 @@ export function useMarketData() {
       const y2Val = tdRates.y2Val;
       const y5Val = tdRates.y5Val ?? fb[2].value;
       const y10Val = tdRates.y10Val ?? fb[3].value;
-      const y30Val = tdRates.y30Val ?? fb[4].value;
+      const y20Val = tdRates.y20Val ?? fb[4].value;
+      const y30Val = tdRates.y30Val ?? fb[5].value;
 
       const spread2s10s = parseFloat(((y10Val - y2Val) * 100).toFixed(1));
       const spread2s30s = parseFloat(((y30Val - y2Val) * 100).toFixed(1));
@@ -136,10 +137,11 @@ export function useMarketData() {
         { ...fb[1], value: y2Val, change: tdRates.y2Change, changePct: tdRates.y2Pct },
         { ...fb[2], value: y5Val },
         { ...fb[3], value: y10Val, change: tdRates.y10Change, changePct: tdRates.y10Pct },
-        { ...fb[4], value: y30Val },
-        tipsBreakeven != null ? { ...fb[5], value: tipsBreakeven } : fb[5],
-        { ...fb[6], value: spread2s10s },
-        { ...fb[7], value: spread2s30s },
+        { ...fb[4], value: y20Val },
+        { ...fb[5], value: y30Val },
+        tipsBreakeven != null ? { ...fb[6], value: tipsBreakeven } : fb[6],
+        { ...fb[7], value: spread2s10s },
+        { ...fb[8], value: spread2s30s },
       ];
 
       const ribbon = [...ribbonBase.current];
