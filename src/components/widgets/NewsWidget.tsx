@@ -31,10 +31,15 @@ export default function NewsWidget({ news, onExpand, onRetry, dragHandleProps, s
       <div className="space-y-0 divide-y divide-slate-800/70">
         {news.map(item => {
           const config = SENTIMENT_CONFIG[item.sentiment];
+          const hasUrl = item.url && item.url !== '#';
           return (
-            <div
+            <a
               key={item.id}
-              className="py-3 group hover:bg-slate-800/30 px-2 -mx-2 rounded transition-colors cursor-pointer"
+              href={hasUrl ? item.url : undefined}
+              target={hasUrl ? '_blank' : undefined}
+              rel={hasUrl ? 'noopener noreferrer' : undefined}
+              className="block py-3 group hover:bg-slate-800/30 px-2 -mx-2 rounded transition-colors"
+              style={{ cursor: hasUrl ? 'pointer' : 'default' }}
             >
               <div className="flex items-start gap-2.5">
                 <div
@@ -50,15 +55,13 @@ export default function NewsWidget({ news, onExpand, onRetry, dragHandleProps, s
                     <span className="text-xs text-slate-600">{item.time}</span>
                   </div>
                 </div>
-                <a
-                  href={item.url}
-                  className="flex-shrink-0 p-1 text-slate-700 hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <ExternalLink size={12} />
-                </a>
+                {hasUrl && (
+                  <span className="flex-shrink-0 p-1 text-slate-700 group-hover:text-slate-400 transition-colors opacity-0 group-hover:opacity-100">
+                    <ExternalLink size={12} />
+                  </span>
+                )}
               </div>
-            </div>
+            </a>
           );
         })}
       </div>

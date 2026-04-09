@@ -317,7 +317,7 @@ export const mockNews: NewsItem[] = [
     headline: 'Fed officials signal patience on rate cuts as inflation remains sticky above 3%',
     source: 'Reuters',
     time: '12 min ago',
-    url: '#',
+    url: 'https://www.reuters.com/markets/us/federal-reserve/',
     sentiment: 'negative',
   },
   {
@@ -325,7 +325,7 @@ export const mockNews: NewsItem[] = [
     headline: 'Treasury yields climb to 3-week high on strong ISM services data',
     source: 'Bloomberg',
     time: '28 min ago',
-    url: '#',
+    url: 'https://www.bloomberg.com/markets/rates-bonds',
     sentiment: 'negative',
   },
   {
@@ -333,7 +333,7 @@ export const mockNews: NewsItem[] = [
     headline: 'Oil surges past $97 on OPEC+ supply cuts and geopolitical tensions',
     source: 'CNBC',
     time: '1 hr ago',
-    url: '#',
+    url: 'https://www.cnbc.com/oil/',
     sentiment: 'negative',
   },
   {
@@ -341,7 +341,7 @@ export const mockNews: NewsItem[] = [
     headline: 'Gold rallies to fresh all-time high above $4,700 amid global uncertainty',
     source: 'MarketWatch',
     time: '1 hr ago',
-    url: '#',
+    url: 'https://www.marketwatch.com/investing/future/gold',
     sentiment: 'positive',
   },
   {
@@ -349,7 +349,7 @@ export const mockNews: NewsItem[] = [
     headline: 'JPMorgan Q1 earnings beat estimates; loan growth moderating, NII outlook raised',
     source: 'WSJ',
     time: '2 hrs ago',
-    url: '#',
+    url: 'https://www.wsj.com/finance/banking',
     sentiment: 'positive',
   },
   {
@@ -357,7 +357,7 @@ export const mockNews: NewsItem[] = [
     headline: 'Dollar hits 5-month high vs yen as BOJ reiterates gradual normalization path',
     source: 'FT',
     time: '2 hrs ago',
-    url: '#',
+    url: 'https://www.ft.com/currencies',
     sentiment: 'neutral',
   },
   {
@@ -365,7 +365,7 @@ export const mockNews: NewsItem[] = [
     headline: 'Credit spreads widen as investors reassess recession probability for H2 2026',
     source: 'Bloomberg',
     time: '3 hrs ago',
-    url: '#',
+    url: 'https://www.bloomberg.com/markets/credit',
     sentiment: 'negative',
   },
   {
@@ -373,7 +373,7 @@ export const mockNews: NewsItem[] = [
     headline: 'NFP preview: Consensus expects 200K jobs added in March, ADP beats at 184K',
     source: 'Reuters',
     time: '4 hrs ago',
-    url: '#',
+    url: 'https://www.reuters.com/markets/us/jobs/',
     sentiment: 'neutral',
   },
   {
@@ -381,7 +381,7 @@ export const mockNews: NewsItem[] = [
     headline: 'European Central Bank holds rates steady, opens door to June cut if data allows',
     source: 'Bloomberg',
     time: '5 hrs ago',
-    url: '#',
+    url: 'https://www.bloomberg.com/news/articles/ecb-policy',
     sentiment: 'positive',
   },
   {
@@ -389,7 +389,7 @@ export const mockNews: NewsItem[] = [
     headline: 'China PMI composite rises to 52.7, strongest reading in 14 months on stimulus',
     source: 'Reuters',
     time: '6 hrs ago',
-    url: '#',
+    url: 'https://www.reuters.com/markets/asia/',
     sentiment: 'positive',
   },
 ];
