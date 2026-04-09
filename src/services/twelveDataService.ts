@@ -246,23 +246,21 @@ export async function getTwelveCommodities(): Promise<PriceItem[]> {
   return [wtiItem, brentItem, natgasItem, goldItem, silverItem, copperItem];
 }
 
-export async function getTwelveRates(): Promise<PriceItem[]> {
+export type TwelveRatesResult = {
+  y2Val: number;
+  y2Change: number;
+  y2Pct: number;
+};
+
+export async function getTwelveRates(): Promise<TwelveRatesResult> {
   const y2Q = await fetchSingleQuote('US2Y').catch(() => null);
   const fb = mockMarketData.rates;
 
-  const y2Val = y2Q ? parseFloat(parseFloat(y2Q.close).toFixed(3)) : fb[1].value;
-  const y2Change = y2Q ? parseFloat(y2Q.change) : fb[1].change;
-  const y2Pct = y2Q ? parseFloat(y2Q.percent_change) : fb[1].changePct;
-
-  return [
-    fb[0],
-    { ...fb[1], value: y2Val, change: y2Change, changePct: y2Pct },
-    fb[2],
-    fb[3],
-    fb[4],
-    fb[5],
-    { ...fb[6], value: parseFloat(((fb[3].value - y2Val) * 100).toFixed(1)) },
-  ];
+  return {
+    y2Val: y2Q ? parseFloat(parseFloat(y2Q.close).toFixed(3)) : fb[1].value,
+    y2Change: y2Q ? parseFloat(y2Q.change) : fb[1].change,
+    y2Pct: y2Q ? parseFloat(y2Q.percent_change) : fb[1].changePct,
+  };
 }
 
 type TdTimeSeries = {

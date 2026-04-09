@@ -48,6 +48,44 @@ async function fetchLatestValue(seriesId: string): Promise<number | null> {
   }
 }
 
+export async function getFredFedFundsRate(): Promise<number | null> {
+  return fetchLatestValue('DFEDTARU');
+}
+
+export async function getFredTipsBreakeven(): Promise<number | null> {
+  return fetchLatestValue('T10YIE');
+}
+
+export type FredYieldCurrents = {
+  dgs5: number | null;
+  dgs10: number | null;
+  dgs30: number | null;
+  vix: number | null;
+};
+
+export async function getFredYieldCurrents(): Promise<FredYieldCurrents> {
+  const cacheKey = 'fred:yield:currents';
+  const cached = cache.get<FredYieldCurrents>(cacheKey);
+  if (cached) return cached;
+
+  const [dgs5, dgs10, dgs30, vix] = await Promise.allSettled([
+    fetchLatestValue('DGS5'),
+    fetchLatestValue('DGS10'),
+    fetchLatestValue('DGS30'),
+    fetchLatestValue('VIXCLS'),
+  ]);
+
+  const result: FredYieldCurrents = {
+    dgs5: dgs5.status === 'fulfilled' ? dgs5.value : null,
+    dgs10: dgs10.status === 'fulfilled' ? dgs10.value : null,
+    dgs30: dgs30.status === 'fulfilled' ? dgs30.value : null,
+    vix: vix.status === 'fulfilled' ? vix.value : null,
+  };
+
+  cache.set(cacheKey, result, TTL.FRED);
+  return result;
+}
+
 export type CreditItem = {
   label: string;
   value: number;
@@ -154,81 +192,49 @@ export async function getLiveInflation(): Promise<InflationItem[]> {
   }
 }
 
-export async function getFredFedFundsRate(): Promise<number | null> {
-  return fetchLatestValue('DFEDTARU');
-}
+export type FedBalanceSheet = {
+  totalAssets: number | null;
+  treasuries: number | null;
+  mortgageBackedSecurities: number | null;
+};
 
-export async function getFredTreasuryYields(): Promise<{
-  dgs2: number | null;
-  dgs5: number | null;
-  dgs10: number | null;
-  dgs30: number | null;
-  dgs1mo: number | null;
-  dgs3mo: number | null;
-  dgs6mo: number | null;
-  dgs1: number | null;
-  dgs3: number | null;
-  dgs7: number | null;
-  dgs20: number | null;
-  vix: number | null;
-}> {
-  const cacheKey = 'fred:treasury:yields';
-  const cached = cache.get<ReturnType<typeof getFredTreasuryYields> extends Promise<infer T> ? T : never>(cacheKey);
-  if (cached) return cached;
-
-  const [dgs2, dgs5, dgs10, dgs30, dgs1mo, dgs3mo, dgs6mo, dgs1, dgs3, dgs7, dgs20, vix] = await Promise.allSettled([
-    fetchLatestValue('DGS2'),
-    fetchLatestValue('DGS5'),
-    fetchLatestValue('DGS10'),
-    fetchLatestValue('DGS30'),
-    fetchLatestValue('DGS1MO'),
-    fetchLatestValue('DGS3MO'),
-    fetchLatestValue('DGS6MO'),
-    fetchLatestValue('DGS1'),
-    fetchLatestValue('DGS3'),
-    fetchLatestValue('DGS7'),
-    fetchLatestValue('DGS20'),
-    fetchLatestValue('VIXCLS'),
+export async function getFredFedBalanceSheet(): Promise<FedBalanceSheet> {
+  const [walcl, treast, wshomcb] = await Promise.allSettled([
+    fetchLatestValue('WALCL'),
+    fetchLatestValue('TREAST'),
+    fetchLatestValue('WSHOMCB'),
   ]);
 
-  const result = {
-    dgs2: dgs2.status === 'fulfilled' ? dgs2.value : null,
-    dgs5: dgs5.status === 'fulfilled' ? dgs5.value : null,
-    dgs10: dgs10.status === 'fulfilled' ? dgs10.value : null,
-    dgs30: dgs30.status === 'fulfilled' ? dgs30.value : null,
-    dgs1mo: dgs1mo.status === 'fulfilled' ? dgs1mo.value : null,
-    dgs3mo: dgs3mo.status === 'fulfilled' ? dgs3mo.value : null,
-    dgs6mo: dgs6mo.status === 'fulfilled' ? dgs6mo.value : null,
-    dgs1: dgs1.status === 'fulfilled' ? dgs1.value : null,
-    dgs3: dgs3.status === 'fulfilled' ? dgs3.value : null,
-    dgs7: dgs7.status === 'fulfilled' ? dgs7.value : null,
-    dgs20: dgs20.status === 'fulfilled' ? dgs20.value : null,
-    vix: vix.status === 'fulfilled' ? vix.value : null,
+  return {
+    totalAssets: walcl.status === 'fulfilled' ? walcl.value : null,
+    treasuries: treast.status === 'fulfilled' ? treast.value : null,
+    mortgageBackedSecurities: wshomcb.status === 'fulfilled' ? wshomcb.value : null,
   };
-
-  cache.set(cacheKey, result, TTL.FRED);
-  return result;
 }
 
 const YIELD_CURVE_MATURITIES = [
-  { maturity: '1M', key: 'dgs1mo' as const },
-  { maturity: '3M', key: 'dgs3mo' as const },
-  { maturity: '6M', key: 'dgs6mo' as const },
-  { maturity: '1Y', key: 'dgs1' as const },
-  { maturity: '2Y', key: 'dgs2' as const },
-  { maturity: '3Y', key: 'dgs3' as const },
-  { maturity: '5Y', key: 'dgs5' as const },
-  { maturity: '7Y', key: 'dgs7' as const },
-  { maturity: '10Y', key: 'dgs10' as const },
-  { maturity: '20Y', key: 'dgs20' as const },
-  { maturity: '30Y', key: 'dgs30' as const },
+  { maturity: '1M', seriesId: 'DGS1MO' },
+  { maturity: '3M', seriesId: 'DGS3MO' },
+  { maturity: '6M', seriesId: 'DGS6MO' },
+  { maturity: '1Y', seriesId: 'DGS1' },
+  { maturity: '2Y', seriesId: 'DGS2' },
+  { maturity: '3Y', seriesId: 'DGS3' },
+  { maturity: '5Y', seriesId: 'DGS5' },
+  { maturity: '7Y', seriesId: 'DGS7' },
+  { maturity: '10Y', seriesId: 'DGS10' },
+  { maturity: '20Y', seriesId: 'DGS20' },
+  { maturity: '30Y', seriesId: 'DGS30' },
 ];
 
 export async function getFredYieldCurve(): Promise<YieldCurveData[] | null> {
   try {
-    const yields = await getFredTreasuryYields();
-    return YIELD_CURVE_MATURITIES.map(({ maturity, key }) => {
-      const current = yields[key];
+    const results = await Promise.allSettled(
+      YIELD_CURVE_MATURITIES.map(({ seriesId }) => fetchLatestValue(seriesId))
+    );
+
+    return YIELD_CURVE_MATURITIES.map(({ maturity }, i) => {
+      const result = results[i];
+      const current = result.status === 'fulfilled' ? result.value : null;
       const fb = mockMarketData.yieldCurve.find(p => p.maturity === maturity) ?? mockMarketData.yieldCurve[0];
       return {
         maturity,
@@ -278,27 +284,13 @@ async function fetchYieldOnDate(seriesId: string, targetDate: string): Promise<n
   return value;
 }
 
-const YIELD_CURVE_FRED_SERIES: { maturity: string; seriesId: string }[] = [
-  { maturity: '1M', seriesId: 'DGS1MO' },
-  { maturity: '3M', seriesId: 'DGS3MO' },
-  { maturity: '6M', seriesId: 'DGS6MO' },
-  { maturity: '1Y', seriesId: 'DGS1' },
-  { maturity: '2Y', seriesId: 'DGS2' },
-  { maturity: '3Y', seriesId: 'DGS3' },
-  { maturity: '5Y', seriesId: 'DGS5' },
-  { maturity: '7Y', seriesId: 'DGS7' },
-  { maturity: '10Y', seriesId: 'DGS10' },
-  { maturity: '20Y', seriesId: 'DGS20' },
-  { maturity: '30Y', seriesId: 'DGS30' },
-];
-
 export async function getFredYieldCurveOverlays(currentCurve: YieldCurveData[]): Promise<YieldCurveData[]> {
   try {
     const oneMonthAgoDate = isoDateOffset(-30);
     const oneYearAgoDate = isoDateOffset(-365);
 
     const results = await Promise.allSettled(
-      YIELD_CURVE_FRED_SERIES.map(async ({ maturity, seriesId }) => {
+      YIELD_CURVE_MATURITIES.map(async ({ maturity, seriesId }) => {
         const [oneMonthAgo, oneYearAgo] = await Promise.all([
           fetchYieldOnDate(seriesId, oneMonthAgoDate),
           fetchYieldOnDate(seriesId, oneYearAgoDate),

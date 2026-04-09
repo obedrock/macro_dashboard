@@ -48,6 +48,7 @@ export const mockMarketData: MarketData = {
     { label: '30Y Treasury', value: 4.90, change: 0.02, changePct: 0.41, unit: '%' },
     { label: '10Y TIPS', value: 2.08, change: 0.01, changePct: 0.48, unit: '%' },
     { label: '2s10s Spread', value: 54.0, change: 1.5, changePct: 2.86, unit: 'bps' },
+    { label: '2s30s Spread', value: 111.0, change: 2.0, changePct: 1.84, unit: 'bps' },
   ],
   equities: [
     { label: 'S&P 500', value: 6760.0, change: -38.0, changePct: -0.56 },
