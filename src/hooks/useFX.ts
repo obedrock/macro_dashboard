@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PriceItem, WidgetStatus } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getTwelveFX } from '../services/twelveDataService';
-import { loadingStatus, loadedStatus, errorStatus } from './statusUtils';
+import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
 
 const TWELVE_REST_REFRESH_MS = 60 * 1000;
 
@@ -19,9 +19,13 @@ export function useFX(): FXHookResult {
   const fetch = useCallback(async () => {
     setStatus(loadingStatus);
     try {
-      const fx = await getTwelveFX();
-      setData(fx);
-      setStatus(loadedStatus);
+      const result = await getTwelveFX();
+      if (result.status === 'error') {
+        setStatus(errorStatus(result.error));
+        return;
+      }
+      setData(result.data);
+      setStatus(result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }

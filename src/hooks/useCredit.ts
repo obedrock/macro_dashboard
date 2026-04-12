@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetStatus, TimeSeriesPoint } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getLiveCreditSpreads } from '../services/fredService';
-import { loadingStatus, loadedStatus, errorStatus } from './statusUtils';
+import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
 
 const FRED_REFRESH_MS = 24 * 60 * 60 * 1000;
 
@@ -19,9 +19,13 @@ export function useCredit(): CreditHookResult {
   const fetch = useCallback(async () => {
     setStatus(loadingStatus);
     try {
-      const credit = await getLiveCreditSpreads();
-      setData(credit);
-      setStatus(loadedStatus);
+      const result = await getLiveCreditSpreads();
+      if (result.status === 'error') {
+        setStatus(errorStatus(result.error));
+        return;
+      }
+      setData(result.data);
+      setStatus(result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { DashboardProvider } from './context/DashboardContext';
+import { MarketDataProvider } from './context/MarketDataContext';
 import { useMarketData } from './hooks/useMarketData';
 import { WidgetId, WidgetStatuses } from './types';
 
@@ -61,7 +62,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <DashboardProvider>
-        <DashboardApp />
+        <MarketDataProvider>
+          <DashboardApp />
+        </MarketDataProvider>
       </DashboardProvider>
     </ThemeProvider>
   );
