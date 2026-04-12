@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-04-12T02:05:47.625Z"
-last_activity: 2026-04-08 — Roadmap created, ready to begin Phase 1 planning
+status: Phase complete — ready for verification
+stopped_at: Completed 01-cleanup-02-PLAN.md
+last_updated: "2026-04-12T02:38:29.937Z"
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** All panels reliably display real, current market data with clear indication of data freshness and error states — no silent failures, no ambiguous mock data
-**Current focus:** Phase 1 — Cleanup
+**Current focus:** Phase 01 — cleanup
 
 ## Current Position
 
-Phase: 1 of 6 (Cleanup)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-04-08 — Roadmap created, ready to begin Phase 1 planning
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 01 (cleanup) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -52,6 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01-cleanup P02 | 98s | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -63,6 +58,9 @@ Recent decisions affecting current work:
 - Init: Refactor in place (not rebuild) — preserve working panels, lower risk
 - Init: Drop Massive/Polygon integration — unused, adds complexity
 - Init: Keep client-side only — no backend needed for personal dashboard
+- [Phase 01-cleanup]: Batch TwelveData REST calls by domain: 14 individual calls reduced to 4 batch calls per refresh cycle
+- [Phase 01-cleanup]: DXY fetched as DX-Y.NYB in FX batch with graceful fallback (not hardcoded mock)
+- [Phase 01-cleanup]: Brent Crude fetched as BZ:COM (not WTI+2.57 fabrication)
 
 ### Pending Todos
 
@@ -74,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T02:05:47.621Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-cleanup/01-CONTEXT.md
+Last session: 2026-04-12T02:38:13.816Z
+Stopped at: Completed 01-cleanup-02-PLAN.md
+Resume file: None

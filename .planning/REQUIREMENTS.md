@@ -8,9 +8,9 @@
 ### Cleanup
 
 - [ ] **CLEAN-01**: Remove Massive/Polygon integration (massiveService.ts, @massive.com/client-js, @supabase/supabase-js)
-- [ ] **CLEAN-02**: Batch TwelveData API calls (equities, rates, commodities) to stay within 8 req/min limit
+- [x] **CLEAN-02**: Batch TwelveData API calls (equities, rates, commodities) to stay within 8 req/min limit
 - [ ] **CLEAN-03**: Fix DST bug in calendar scheduling (hardcoded UTC-5 → America/New_York)
-- [ ] **CLEAN-04**: Fix DXY always-mock and Brent Crude fabrication (WTI+2.57)
+- [x] **CLEAN-04**: Fix DXY always-mock and Brent Crude fabrication (WTI+2.57)
 
 ### Data Layer
 
@@ -84,9 +84,9 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CLEAN-01 | Phase 1 | Pending |
-| CLEAN-02 | Phase 1 | Pending |
+| CLEAN-02 | Phase 1 | Complete |
 | CLEAN-03 | Phase 1 | Pending |
-| CLEAN-04 | Phase 1 | Pending |
+| CLEAN-04 | Phase 1 | Complete |
 | DATA-01 | Phase 2 | Pending |
 | DATA-02 | Phase 2 | Pending |
 | DATA-03 | Phase 2 | Pending |

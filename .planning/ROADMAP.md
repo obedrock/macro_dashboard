@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 Plans:
 - [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
-- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
+- [x] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 
 ### Phase 2: Data Layer Hardening
 **Goal**: Every service returns a typed DataResult wrapper so errors propagate clearly instead of silently becoming mock data
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Cleanup | 0/2 | Planning complete | - |
+| 1. Cleanup | 1/2 | In Progress|  |
 | 2. Data Layer Hardening | 0/TBD | Not started | - |
 | 3. WebSocket Reliability | 0/TBD | Not started | - |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |
