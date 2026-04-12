@@ -30,7 +30,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. TwelveData equity/rate/commodity calls are batched — network tab shows at most one batch request per group, never exceeding 8 req/min
   3. DXY displays a real fetched value (not always-mock), and Brent Crude shows its own fetched price instead of WTI+2.57
   4. Economic calendar events are scheduled with America/New_York timezone — no DST-induced off-by-one-hour shifts
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
+- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 
 ### Phase 2: Data Layer Hardening
 **Goal**: Every service returns a typed DataResult wrapper so errors propagate clearly instead of silently becoming mock data
@@ -42,7 +45,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. When an API response fails Zod schema validation, the widget shows an error state rather than rendering NaN or undefined values
   4. When one source in a multi-source widget fails, the widget renders available data with a visible warning rather than going fully blank
   5. Error messages shown to the user are human-readable (e.g., "Data unavailable — rate limit reached") not raw HTTP status codes
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
+- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 
 ### Phase 3: WebSocket Reliability
 **Goal**: WebSocket connections recover automatically from drops with bounded retry behavior and visible connection state
@@ -53,7 +59,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. After 10 failed reconnection attempts, the client stops retrying and enters a permanent "failed" state rather than looping forever
   3. The ribbon or connection indicator reflects the current WebSocket state (connected / connecting / reconnecting / failed) in real time
   4. No mutable global variables for lastPrices or prevPrices are exported — price state is encapsulated inside WebSocketManager
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
+- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 
 ### Phase 4: Architecture Decomposition
 **Goal**: The monolithic useMarketData hook is broken into composable domain hooks, with error boundaries ensuring widget failures are isolated
@@ -64,7 +73,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. All existing widgets continue receiving the same context shape — zero widget component changes required
   3. A runtime error inside one widget panel does not crash the whole dashboard — other panels keep rendering
   4. Polling intervals do not re-register on every render — useEffect dependency arrays are stable and intervals fire at their intended cadence
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
+- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 **UI hint**: yes
 
 ### Phase 5: UI Transparency
@@ -77,7 +89,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The ribbon displays a WebSocket connection indicator that reflects the state exposed by Phase 3 (connected / reconnecting / failed)
   4. Widgets correctly display a "Market closed" label outside of US equity trading hours
   5. Widgets serving from a degraded cache show "Cached X min ago" rather than presenting stale data as fresh
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
+- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 **UI hint**: yes
 
 ### Phase 6: Test Infrastructure
@@ -90,7 +105,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Hook tests verify status machine transitions (loading → live, live → error, error → reconnecting) without requiring a live API
   4. Cache TTL tests verify that entries expire and trigger re-fetch at the configured interval
   5. WebSocket reconnection tests verify backoff timing and the "gave up" terminal state after 10 attempts
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
+- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 
 ## Progress
 
@@ -99,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Cleanup | 0/TBD | Not started | - |
+| 1. Cleanup | 0/2 | Planning complete | - |
 | 2. Data Layer Hardening | 0/TBD | Not started | - |
 | 3. WebSocket Reliability | 0/TBD | Not started | - |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |
