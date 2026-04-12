@@ -90,6 +90,11 @@ export interface MarketData {
   lastUpdated: Date;
 }
 
+export interface ResultWarning {
+  field: string;
+  message: string;
+}
+
 export type WidgetLoadState = 'loading' | 'loaded' | 'error';
 
 export interface WidgetStatus {
