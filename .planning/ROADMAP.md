@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Cleanup** - Remove dead integrations and fix known data bugs before any hardening work (completed 2026-04-12)
 - [x] **Phase 2: Data Layer Hardening** - Wrap all service calls in typed results, add error surfacing, rate limit handling, and schema validation (completed 2026-04-12)
-- [ ] **Phase 3: WebSocket Reliability** - Replace the flat-retry loop with exponential backoff, expose connection state, encapsulate globals
+- [x] **Phase 3: WebSocket Reliability** - Replace the flat-retry loop with exponential backoff, expose connection state, encapsulate globals (completed 2026-04-12)
 - [ ] **Phase 4: Architecture Decomposition** - Decompose monolithic hook into domain-specific hooks, add error boundaries
 - [ ] **Phase 5: UI Transparency** - Surface data freshness, fallback badges, WebSocket status, and market hours context to users
 - [ ] **Phase 6: Test Infrastructure** - Install Vitest + MSW and write tests for services, hooks, cache, and WebSocket logic
@@ -63,7 +63,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 03-01-PLAN.md — Create WebSocketManager class with backoff, retry cap, heartbeat, and WsStatus type
-- [ ] 03-02-PLAN.md — Migrate twelveDataService.ts and useMarketData.ts to use wsManager
+- [x] 03-02-PLAN.md — Migrate twelveDataService.ts and useMarketData.ts to use wsManager
 
 ### Phase 4: Architecture Decomposition
 **Goal**: The monolithic useMarketData hook is broken into composable domain hooks, with error boundaries ensuring widget failures are isolated
@@ -120,7 +120,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Cleanup | 2/2 | Complete   | 2026-04-12 |
 | 2. Data Layer Hardening | 3/3 | Complete   | 2026-04-12 |
-| 3. WebSocket Reliability | 1/2 | In Progress|  |
+| 3. WebSocket Reliability | 2/2 | Complete   | 2026-04-12 |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |
 | 5. UI Transparency | 0/TBD | Not started | - |
 | 6. Test Infrastructure | 0/TBD | Not started | - |
