@@ -4,81 +4,10 @@ import { mockMarketData } from '../data/mockData';
 import { rateLimiter } from './rateLimiter';
 import { RateLimitError, HttpError, ValidationError, toUserMessage, httpStatusToCategory } from './errorMessages';
 import { TdBatchResultSchema, TdQuoteSchema, TdTimeSeriesSchema } from './schemas';
+import { wsManager } from './wsManager';
 
 const API_KEY = import.meta.env.VITE_TWELVEDATA_API_KEY as string;
 const REST_BASE = 'https://api.twelvedata.com';
-const WS_URL = `wss://ws.twelvedata.com/v1/quotes/price?apikey=${API_KEY}`;
-
-export type RibbonTickUpdate = {
-  symbol: string;
-  price: number;
-  timestamp: number;
-};
-
-export type WsCallback = (update: RibbonTickUpdate) => void;
-
-const WS_SYMBOLS = ['SPY', 'QQQ', 'DIA', 'IWM', 'CL1:COM', 'XAU/USD', 'XAG/USD', 'HG1:COM'];
-
-let ws: WebSocket | null = null;
-const wsCallbacks: Set<WsCallback> = new Set();
-let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let wsConnected = false;
-export const lastPrices: Record<string, number> = {};
-export const prevPrices: Record<string, number> = {};
-
-function connectWebSocket() {
-  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
-
-  ws = new WebSocket(WS_URL);
-
-  ws.onopen = () => {
-    wsConnected = true;
-    ws!.send(JSON.stringify({ action: 'subscribe', params: { symbols: WS_SYMBOLS.join(',') } }));
-  };
-
-  ws.onmessage = (evt) => {
-    try {
-      const msg = JSON.parse(evt.data as string);
-      if (msg.event === 'price' && msg.symbol && msg.price != null) {
-        const sym = msg.symbol as string;
-        const price = parseFloat(msg.price);
-        if (!isNaN(price)) {
-          prevPrices[sym] = lastPrices[sym] ?? price;
-          lastPrices[sym] = price;
-          const update: RibbonTickUpdate = { symbol: sym, price, timestamp: Date.now() };
-          wsCallbacks.forEach(cb => cb(update));
-        }
-      }
-    } catch {}
-  };
-
-  ws.onclose = () => {
-    wsConnected = false;
-    if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
-    wsReconnectTimer = setTimeout(connectWebSocket, 5000);
-  };
-
-  ws.onerror = () => {
-    ws?.close();
-  };
-}
-
-export function subscribeWebSocket(cb: WsCallback): () => void {
-  wsCallbacks.add(cb);
-  connectWebSocket();
-  return () => {
-    wsCallbacks.delete(cb);
-    if (wsCallbacks.size === 0 && ws) {
-      ws.close();
-      ws = null;
-      wsConnected = false;
-    }
-  };
-}
-
-export function isWsConnected(): boolean {
-  return wsConnected;
-}
 
 async function tdFetch<T>(path: string): Promise<T> {
   if (rateLimiter.isBlocked('twelvedata')) {
@@ -183,8 +112,8 @@ function etfScaled(q: TdQuote | null, fb: PriceItem, label: string, mult: number
 }
 
 function wsToItem(sym: string, fallback: PriceItem, label: string, valueMultiplier = 1): PriceItem {
-  const wsPrice = lastPrices[sym];
-  const prev = prevPrices[sym];
+  const wsPrice = wsManager.getPrice(sym);
+  const prev = wsManager.getPrevPrice(sym);
   if (wsPrice == null) return fallback;
   const value = parseFloat((wsPrice * valueMultiplier).toFixed(2));
   const change = prev ? parseFloat(((wsPrice - prev) * valueMultiplier).toFixed(3)) : 0;
@@ -370,10 +299,10 @@ export async function getTwelveTimeSeries(
 }
 
 export function buildRibbonFromWs(fallback: PriceItem[]): PriceItem[] {
-  const spyWs = lastPrices['SPY'];
-  const prevSpy = prevPrices['SPY'];
-  const wtiWs = lastPrices['CL1:COM'];
-  const goldWs = lastPrices['XAU/USD'];
+  const spyWs = wsManager.getPrice('SPY');
+  const prevSpy = wsManager.getPrevPrice('SPY');
+  const wtiWs = wsManager.getPrice('CL1:COM');
+  const goldWs = wsManager.getPrice('XAU/USD');
 
   return [
     spyWs != null
