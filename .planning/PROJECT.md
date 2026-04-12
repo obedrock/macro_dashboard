@@ -35,7 +35,7 @@ All panels reliably display real, current market data with clear indication of d
 - [ ] WebSocket reconnection — automatic reconnect with backoff on connection drops
 - [ ] Clear data state indicators — users can tell if data is live, stale, loading, or errored
 - [ ] Rate limit handling — graceful degradation when API limits are hit
-- [ ] Remove Massive/Polygon integration — simplify to 3 core data sources
+- ✓ Remove Massive/Polygon integration — simplify to 3 core data sources — Validated in Phase 01: cleanup
 - [ ] Test infrastructure — add test framework and tests for critical data services
 - [ ] Better mock data boundary — clear separation between real and fallback data
 
@@ -71,7 +71,10 @@ The codebase map is at `.planning/codebase/` with detailed analysis of architect
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Refactor in place (not rebuild) | Preserve working functionality, lower risk | — Pending |
-| Drop Massive/Polygon integration | Unused secondary source, adds complexity | — Pending |
+| Drop Massive/Polygon integration | Unused secondary source, adds complexity | Done (Phase 01) |
+| Batch TwelveData REST calls by domain | Reduce ~14 calls/cycle to 4 batch requests | Done (Phase 01) |
+| Use Intl.DateTimeFormat for ET timezone | Native DST-aware scheduling, no hardcoded UTC offset | Done (Phase 01) |
+| Fetch real DXY (DX-Y.NYB) and Brent (BZ:COM) | Eliminate data fabrication, graceful fallback if unavailable | Done (Phase 01) |
 | Add test infrastructure | Ensure reliability fixes hold up over time | — Pending |
 | Keep client-side only | No backend needed for personal dashboard | — Pending |
 
@@ -93,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after initialization*
+*Last updated: 2026-04-11 after Phase 01 (cleanup) completion*
