@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { NewsItem, WidgetStatus } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getFinnhubNews } from '../services/finnhubService';
-import { loadingStatus, loadedStatus, errorStatus } from './statusUtils';
+import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
 
 const NEWS_REFRESH_MS = 5 * 60 * 1000;
 
@@ -19,9 +19,13 @@ export function useNews(): NewsHookResult {
   const fetch = useCallback(async () => {
     setStatus(loadingStatus);
     try {
-      const news = await getFinnhubNews();
-      setData(news);
-      setStatus(loadedStatus);
+      const result = await getFinnhubNews();
+      if (result.status === 'error') {
+        setStatus(errorStatus(result.error));
+        return;
+      }
+      setData(result.data);
+      setStatus(result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }

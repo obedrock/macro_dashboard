@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetStatus } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getLiveInflation, InflationItem } from '../services/fredService';
-import { loadingStatus, loadedStatus, errorStatus } from './statusUtils';
+import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
 
 const INFLATION_CHECK_MS = 24 * 60 * 60 * 1000;
 
@@ -20,7 +20,12 @@ export function useInflation(): InflationHookResult {
   const fetch = useCallback(async (forceRefresh = false) => {
     setStatus(loadingStatus);
     try {
-      const inflation = await getLiveInflation();
+      const result = await getLiveInflation();
+      if (result.status === 'error') {
+        setStatus(errorStatus(result.error));
+        return;
+      }
+      const inflation = result.data;
       const latestDate = inflation[0]?.dataThrough ?? '';
 
       if (!forceRefresh && latestDate && latestDate === lastInflationDate.current) {
@@ -30,7 +35,7 @@ export function useInflation(): InflationHookResult {
 
       lastInflationDate.current = latestDate;
       setData(inflation);
-      setStatus(loadedStatus);
+      setStatus(result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
