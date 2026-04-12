@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { YieldCurveData, WidgetStatus } from '../types';
+import { YieldCurveData, WidgetStatus, DataSource } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getFredYieldCurve, getFredYieldCurveOverlays } from '../services/fredService';
 import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
@@ -10,11 +10,15 @@ export interface YieldsHookResult {
   data: YieldCurveData[];
   status: WidgetStatus;
   fetch: () => Promise<void>;
+  lastFetched: number;
+  source: DataSource;
 }
 
 export function useYields(): YieldsHookResult {
   const [data, setData] = useState<YieldCurveData[]>(mockMarketData.yieldCurve);
   const [status, setStatus] = useState<WidgetStatus>(loadingStatus);
+  const [lastFetched, setLastFetched] = useState<number>(0);
+  const [source, setSource] = useState<DataSource>('fallback');
 
   const fetch = useCallback(async () => {
     setStatus(loadingStatus);
@@ -34,6 +38,8 @@ export function useYields(): YieldsHookResult {
           : [{ field: 'overlays', message: 'Historical overlay unavailable' }]),
       ];
       setData(finalCurve);
+      setLastFetched(Date.now());
+      setSource(warnings.length > 0 ? 'partial' : 'live');
       setStatus(warnings.length ? warnedStatus(warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
@@ -46,5 +52,5 @@ export function useYields(): YieldsHookResult {
     return () => clearInterval(interval);
   }, [fetch]);
 
-  return { data, status, fetch };
+  return { data, status, fetch, lastFetched, source };
 }

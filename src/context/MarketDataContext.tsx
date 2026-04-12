@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { MarketData, WidgetStatuses, WidgetStatus, WsStatus } from '../types';
+import { MarketData, WidgetStatuses, WidgetStatus, WsStatus, DataSource, WidgetTimestamps, WidgetSources } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { wsManager } from '../services/wsManager';
 import { buildRibbonFromWs } from '../services/twelveDataService';
@@ -28,6 +28,17 @@ const DEFAULT_STATUSES: WidgetStatuses = {
   calendar: loadingStatus,
 };
 
+const DEFAULT_TIMESTAMPS: WidgetTimestamps = {
+  ribbon: 0, equities: 0, fx: 0, commodities: 0, rates: 0,
+  yields: 0, credit: 0, inflation: 0, news: 0, calendar: 0,
+};
+
+const DEFAULT_SOURCES: WidgetSources = {
+  ribbon: 'fallback', equities: 'fallback', fx: 'fallback', commodities: 'fallback',
+  rates: 'fallback', yields: 'fallback', credit: 'fallback', inflation: 'fallback',
+  news: 'fallback', calendar: 'fallback',
+};
+
 interface MarketDataContextType {
   data: MarketData;
   statuses: WidgetStatuses;
@@ -36,6 +47,9 @@ interface MarketDataContextType {
   refresh: () => Promise<void>;
   retryWidget: (key: keyof WidgetStatuses) => void;
   wsStatus: WsStatus;
+  widgetTimestamps: WidgetTimestamps;
+  widgetSources: WidgetSources;
+  now: number;
 }
 
 const MarketDataCtx = createContext<MarketDataContextType>({
@@ -46,6 +60,9 @@ const MarketDataCtx = createContext<MarketDataContextType>({
   refresh: async () => {},
   retryWidget: () => {},
   wsStatus: 'connecting',
+  widgetTimestamps: DEFAULT_TIMESTAMPS,
+  widgetSources: DEFAULT_SOURCES,
+  now: Date.now(),
 });
 
 export function MarketDataProvider({ children }: { children: React.ReactNode }) {
@@ -71,9 +88,16 @@ export function MarketDataProvider({ children }: { children: React.ReactNode }) 
 
   const [ribbonData, setRibbonData] = useState<MarketData['ribbon']>(mockMarketData.ribbon);
   const [ribbonStatus, setRibbonStatus] = useState<WidgetStatus>(loadingStatus);
+  const [ribbonLastFetched, setRibbonLastFetched] = useState<number>(0);
   const [wsStatus, setWsStatus] = useState<WsStatus>('connecting');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [now, setNow] = useState<number>(Date.now());
   const ribbonBase = useRef<MarketData['ribbon']>(mockMarketData.ribbon);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     setRibbonStatus(loadingStatus);
@@ -81,6 +105,7 @@ export function MarketDataProvider({ children }: { children: React.ReactNode }) 
       if (update.symbol === 'SPY' || update.symbol === 'CL1:COM' || update.symbol === 'XAU/USD') {
         const newRibbon = buildRibbonFromWs(ribbonBase.current);
         setRibbonStatus(loadedStatus);
+        setRibbonLastFetched(Date.now());
         ribbonBase.current = newRibbon;
         setRibbonData(newRibbon);
       }
@@ -149,6 +174,32 @@ export function MarketDataProvider({ children }: { children: React.ReactNode }) 
     calendar: calendar.status,
   };
 
+  const widgetTimestamps: WidgetTimestamps = {
+    ribbon: ribbonLastFetched,
+    equities: equities.lastFetched,
+    fx: fx.lastFetched,
+    commodities: commodities.lastFetched,
+    rates: rates.lastFetched,
+    yields: yields.lastFetched,
+    credit: credit.lastFetched,
+    inflation: inflation.lastFetched,
+    news: news.lastFetched,
+    calendar: calendar.lastFetched,
+  };
+
+  const widgetSources: WidgetSources = {
+    ribbon: wsStatus === 'connected' ? 'live' : 'fallback' as DataSource,
+    equities: equities.source,
+    fx: fx.source,
+    commodities: commodities.source,
+    rates: rates.source,
+    yields: yields.source,
+    credit: credit.source,
+    inflation: inflation.source,
+    news: news.source,
+    calendar: calendar.source,
+  };
+
   const loading = Object.values(statuses).some(s => s.state === 'loading');
 
   const refresh = useCallback(async () => {
@@ -177,7 +228,7 @@ export function MarketDataProvider({ children }: { children: React.ReactNode }) 
   }, [equitiesFetch, fxFetch, commoditiesFetch, ratesFetch, yieldsFetch, creditFetch, inflationFetch, newsFetch, calendarFetch]);
 
   return (
-    <MarketDataCtx.Provider value={{ data, statuses, loading, lastUpdated, refresh, retryWidget, wsStatus }}>
+    <MarketDataCtx.Provider value={{ data, statuses, loading, lastUpdated, refresh, retryWidget, wsStatus, widgetTimestamps, widgetSources, now }}>
       {children}
     </MarketDataCtx.Provider>
   );

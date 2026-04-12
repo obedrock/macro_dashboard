@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { EconomicEvent, FomcData, ResultWarning, WidgetStatus } from '../types';
+import { EconomicEvent, FomcData, ResultWarning, WidgetStatus, DataSource } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getFinnhubEconomicCalendar, getFinnhubFedWatch } from '../services/finnhubService';
 import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
@@ -36,6 +36,8 @@ export interface CalendarHookResult {
   data: { economicCalendar: EconomicEvent[]; fomc: FomcData };
   status: WidgetStatus;
   fetch: () => Promise<void>;
+  lastFetched: number;
+  source: DataSource;
 }
 
 export function useCalendar(): CalendarHookResult {
@@ -44,6 +46,8 @@ export function useCalendar(): CalendarHookResult {
     fomc: mockMarketData.fomc,
   });
   const [status, setStatus] = useState<WidgetStatus>(loadingStatus);
+  const [lastFetched, setLastFetched] = useState<number>(0);
+  const [source, setSource] = useState<DataSource>('fallback');
   const calendarTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const calendarIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -73,6 +77,8 @@ export function useCalendar(): CalendarHookResult {
         economicCalendar: calData ?? prev.economicCalendar,
         fomc: fomcData ?? prev.fomc,
       }));
+      setLastFetched(Date.now());
+      setSource(warnings.length > 0 ? 'partial' : 'live');
       setStatus(warnings.length ? warnedStatus(warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
@@ -94,5 +100,5 @@ export function useCalendar(): CalendarHookResult {
     };
   }, [fetch]);
 
-  return { data, status, fetch };
+  return { data, status, fetch, lastFetched, source };
 }
