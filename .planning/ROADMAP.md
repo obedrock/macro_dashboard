@@ -12,7 +12,7 @@ A brownfield refactor of an existing, functional dashboard. The work proceeds in
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Cleanup** - Remove dead integrations and fix known data bugs before any hardening work
+- [x] **Phase 1: Cleanup** - Remove dead integrations and fix known data bugs before any hardening work (completed 2026-04-12)
 - [ ] **Phase 2: Data Layer Hardening** - Wrap all service calls in typed results, add error surfacing, rate limit handling, and schema validation
 - [ ] **Phase 3: WebSocket Reliability** - Replace the flat-retry loop with exponential backoff, expose connection state, encapsulate globals
 - [ ] **Phase 4: Architecture Decomposition** - Decompose monolithic hook into domain-specific hooks, add error boundaries
@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Economic calendar events are scheduled with America/New_York timezone — no DST-induced off-by-one-hour shifts
 **Plans**: 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
+- [x] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
 - [x] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 
 ### Phase 2: Data Layer Hardening
@@ -48,7 +48,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
-- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
+- [x] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
 
 ### Phase 3: WebSocket Reliability
 **Goal**: WebSocket connections recover automatically from drops with bounded retry behavior and visible connection state
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Cleanup | 1/2 | In Progress|  |
+| 1. Cleanup | 2/2 | Complete   | 2026-04-12 |
 | 2. Data Layer Hardening | 0/TBD | Not started | - |
 | 3. WebSocket Reliability | 0/TBD | Not started | - |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |

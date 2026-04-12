@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase complete — ready for verification
-stopped_at: Completed 01-cleanup-02-PLAN.md
-last_updated: "2026-04-12T02:38:29.937Z"
+stopped_at: Completed 01-cleanup-01-PLAN.md
+last_updated: "2026-04-12T02:38:41.505Z"
 progress:
   total_phases: 6
   completed_phases: 1
@@ -47,6 +47,7 @@ Plan: 2 of 2
 
 *Updated after each plan completion*
 | Phase 01-cleanup P02 | 98s | 2 tasks | 1 files |
+| Phase 01-cleanup P01 | 12 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,8 @@ Recent decisions affecting current work:
 - [Phase 01-cleanup]: Batch TwelveData REST calls by domain: 14 individual calls reduced to 4 batch calls per refresh cycle
 - [Phase 01-cleanup]: DXY fetched as DX-Y.NYB in FX batch with graceful fallback (not hardcoded mock)
 - [Phase 01-cleanup]: Brent Crude fetched as BZ:COM (not WTI+2.57 fabrication)
+- [Phase 01-cleanup]: Remove TTL.MASSIVE from cache.ts alongside massiveService.ts deletion to avoid dead constants
+- [Phase 01-cleanup]: Use Intl.DateTimeFormat formatToParts with America/New_York for DST-safe ET scheduling
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T02:38:13.816Z
-Stopped at: Completed 01-cleanup-02-PLAN.md
+Last session: 2026-04-12T02:38:41.501Z
+Stopped at: Completed 01-cleanup-01-PLAN.md
 Resume file: None
