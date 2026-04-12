@@ -109,3 +109,16 @@ export interface WidgetStatuses {
   news: WidgetStatus;
   calendar: WidgetStatus;
 }
+
+// --- Phase 2: Data Layer Hardening ---
+
+export type DataSource = 'live' | 'cache' | 'partial' | 'fallback';
+
+export interface ResultWarning {
+  field: string;
+  message: string;
+}
+
+export type DataResult<T> =
+  | { status: 'ok'; data: T; source: DataSource; timestamp: number; warnings?: ResultWarning[] }
+  | { status: 'error'; error: string; source: DataSource; timestamp: number };
