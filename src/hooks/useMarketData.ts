@@ -33,17 +33,27 @@ const FRED_REFRESH_MS = 24 * 60 * 60 * 1000;
 
 function msUntilNextCalendarRefresh(): number {
   const now = new Date();
-  const etOffset = -5 * 60;
-  const utcNow = now.getTime() + now.getTimezoneOffset() * 60000;
-  const etNow = new Date(utcNow + etOffset * 60000);
 
-  const next835 = new Date(etNow);
-  next835.setHours(8, 35, 0, 0);
-  if (etNow >= next835) next835.setDate(next835.getDate() + 1);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+  }).formatToParts(now);
 
-  const msTo835 = next835.getTime() - etNow.getTime();
-  const msToTwoHour = CALENDAR_REFRESH_MS - (etNow.getTime() % CALENDAR_REFRESH_MS);
+  const etHour = parseInt(parts.find(p => p.type === 'hour')!.value, 10) % 24;
+  const etMinute = parseInt(parts.find(p => p.type === 'minute')!.value, 10);
+  const etSecond = parseInt(parts.find(p => p.type === 'second')!.value, 10);
 
+  const etSecondsNow = etHour * 3600 + etMinute * 60 + etSecond;
+  const target835 = 8 * 3600 + 35 * 60;
+
+  const msTo835 = etSecondsNow < target835
+    ? (target835 - etSecondsNow) * 1000
+    : (86400 - etSecondsNow + target835) * 1000;
+
+  const msToTwoHour = CALENDAR_REFRESH_MS - (now.getTime() % CALENDAR_REFRESH_MS);
   return Math.min(msTo835, msToTwoHour);
 }
 
