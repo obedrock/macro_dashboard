@@ -13,7 +13,7 @@ A brownfield refactor of an existing, functional dashboard. The work proceeds in
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Cleanup** - Remove dead integrations and fix known data bugs before any hardening work (completed 2026-04-12)
-- [ ] **Phase 2: Data Layer Hardening** - Wrap all service calls in typed results, add error surfacing, rate limit handling, and schema validation
+- [x] **Phase 2: Data Layer Hardening** - Wrap all service calls in typed results, add error surfacing, rate limit handling, and schema validation (completed 2026-04-12)
 - [ ] **Phase 3: WebSocket Reliability** - Replace the flat-retry loop with exponential backoff, expose connection state, encapsulate globals
 - [ ] **Phase 4: Architecture Decomposition** - Decompose monolithic hook into domain-specific hooks, add error boundaries
 - [ ] **Phase 5: UI Transparency** - Surface data freshness, fallback badges, WebSocket status, and market hours context to users
@@ -49,7 +49,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Foundation: DataResult types, RateLimiter, error messages, Zod schemas
 - [x] 02-02-PLAN.md — Service migration: all services return DataResult with validation
-- [ ] 02-03-PLAN.md — Hook adaptation: useMarketData unwraps DataResult
+- [x] 02-03-PLAN.md — Hook adaptation: useMarketData unwraps DataResult
 
 ### Phase 3: WebSocket Reliability
 **Goal**: WebSocket connections recover automatically from drops with bounded retry behavior and visible connection state
@@ -119,7 +119,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Cleanup | 2/2 | Complete   | 2026-04-12 |
-| 2. Data Layer Hardening | 1/3 | In Progress|  |
+| 2. Data Layer Hardening | 3/3 | Complete   | 2026-04-12 |
 | 3. WebSocket Reliability | 0/TBD | Not started | - |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |
 | 5. UI Transparency | 0/TBD | Not started | - |

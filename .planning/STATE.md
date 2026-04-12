@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 02-data-layer-hardening 02-02-PLAN.md
-last_updated: "2026-04-12T03:34:20.989Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 02-data-layer-hardening 02-03-PLAN.md
+last_updated: "2026-04-12T03:41:22.852Z"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Plan: 3 of 3
 | Phase 01-cleanup P01 | 12 | 2 tasks | 6 files |
 | Phase 02-data-layer-hardening P01 | 8 | 2 tasks | 6 files |
 | Phase 02-data-layer-hardening P02 | 643 | 2 tasks | 3 files |
+| Phase 02-data-layer-hardening P03 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - [Phase 02-data-layer-hardening]: Internal helpers throw on failure; only exported functions return DataResult (avoids double-wrapping errors)
 - [Phase 02-data-layer-hardening]: Partial success pattern: Promise.allSettled + warnings array + source: partial when some FRED sources fail
 - [Phase 02-data-layer-hardening]: getFredYieldCurve returns DataResult<YieldCurveData[]> with 0-value placeholders for missing maturities (not null)
+- [Phase 02-data-layer-hardening]: Infrastructure safety-net catch blocks retained in useMarketData callbacks — they catch unexpected non-DataResult errors, not service errors
+- [Phase 02-data-layer-hardening]: warnedStatus stores warning text in WidgetStatus.error with state loaded — Phase 5 (UI-02) adds amber badge treatment
+- [Phase 02-data-layer-hardening]: fetchCalendar switched from Promise.allSettled to Promise.all since services return DataResult not throw
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T03:34:20.985Z
-Stopped at: Completed 02-data-layer-hardening 02-02-PLAN.md
+Last session: 2026-04-12T03:41:22.848Z
+Stopped at: Completed 02-data-layer-hardening 02-03-PLAN.md
 Resume file: None
