@@ -1,23 +1,20 @@
 import { cache, TTL } from './cache';
-import { TimeSeriesPoint, YieldCurveData } from '../types';
-import { mockMarketData } from '../data/mockData';
+import { DataResult, ResultWarning, TimeSeriesPoint, YieldCurveData } from '../types';
+import { rateLimiter } from './rateLimiter';
+import { RateLimitError, HttpError, ValidationError, toUserMessage, httpStatusToCategory } from './errorMessages';
+import { FredResponseSchema } from './schemas';
 
 const FRED_BASE = 'https://api.stlouisfed.org/fred';
 const API_KEY = import.meta.env.VITE_FRED_API_KEY as string;
-
-type FredObservation = {
-  date: string;
-  value: string;
-};
-
-type FredResponse = {
-  observations: FredObservation[];
-};
 
 async function fetchSeries(seriesId: string, limit = 365): Promise<TimeSeriesPoint[]> {
   const cacheKey = `fred:${seriesId}:${limit}`;
   const cached = cache.get<TimeSeriesPoint[]>(cacheKey);
   if (cached) return cached;
+
+  if (rateLimiter.isBlocked('fred')) {
+    throw new RateLimitError('Rate limit reached — retrying shortly');
+  }
 
   const url = new URL(`${FRED_BASE}/series/observations`);
   url.searchParams.set('series_id', seriesId);
@@ -27,10 +24,24 @@ async function fetchSeries(seriesId: string, limit = 365): Promise<TimeSeriesPoi
   url.searchParams.set('limit', String(limit));
 
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`FRED ${res.status}: ${seriesId}`);
 
-  const json: FredResponse = await res.json();
-  const points: TimeSeriesPoint[] = json.observations
+  if (res.status === 429) {
+    rateLimiter.onRateLimit('fred');
+    throw new RateLimitError('Rate limit reached — retrying shortly');
+  }
+
+  if (!res.ok) {
+    throw new HttpError(res.status, seriesId);
+  }
+
+  rateLimiter.onSuccess('fred');
+  const json = await res.json();
+  const parsed = FredResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new ValidationError('Unexpected data format');
+  }
+
+  const points: TimeSeriesPoint[] = parsed.data.observations
     .filter(o => o.value !== '.')
     .map(o => ({ date: o.date, value: parseFloat(o.value) }))
     .reverse();
@@ -48,8 +59,17 @@ async function fetchLatestValue(seriesId: string): Promise<number | null> {
   }
 }
 
-export async function getFredFedFundsRate(): Promise<number | null> {
-  return fetchLatestValue('DFEDTARU');
+export async function getFredFedFundsRate(): Promise<DataResult<number | null>> {
+  try {
+    const value = await fetchLatestValue('DFEDTARU');
+    return { status: 'ok', data: value, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
 
 export type FredTreasuryYields = {
@@ -60,7 +80,7 @@ export type FredTreasuryYields = {
   y30: number | null;
 };
 
-export async function getFredTreasuryYields(): Promise<FredTreasuryYields> {
+export async function getFredTreasuryYields(): Promise<DataResult<FredTreasuryYields>> {
   const [y2, y5, y10, y20, y30] = await Promise.allSettled([
     fetchLatestValue('DGS2'),
     fetchLatestValue('DGS5'),
@@ -69,21 +89,62 @@ export async function getFredTreasuryYields(): Promise<FredTreasuryYields> {
     fetchLatestValue('DGS30'),
   ]);
 
-  return {
-    y2: y2.status === 'fulfilled' ? y2.value : null,
-    y5: y5.status === 'fulfilled' ? y5.value : null,
-    y10: y10.status === 'fulfilled' ? y10.value : null,
-    y20: y20.status === 'fulfilled' ? y20.value : null,
-    y30: y30.status === 'fulfilled' ? y30.value : null,
+  const allFailed = [y2, y5, y10, y20, y30].every(r => r.status === 'rejected');
+  if (allFailed) {
+    return { status: 'error', error: toUserMessage('server_error'), source: 'fallback', timestamp: Date.now() };
+  }
+
+  const warnings: ResultWarning[] = [];
+  const seriesLabels: Record<string, string> = {
+    DGS2: 'Treasury 2Y unavailable',
+    DGS5: 'Treasury 5Y unavailable',
+    DGS10: 'Treasury 10Y unavailable',
+    DGS20: 'Treasury 20Y unavailable',
+    DGS30: 'Treasury 30Y unavailable',
   };
+
+  const y2Val = y2.status === 'fulfilled' ? y2.value : null;
+  const y5Val = y5.status === 'fulfilled' ? y5.value : null;
+  const y10Val = y10.status === 'fulfilled' ? y10.value : null;
+  const y20Val = y20.status === 'fulfilled' ? y20.value : null;
+  const y30Val = y30.status === 'fulfilled' ? y30.value : null;
+
+  if (y2.status === 'rejected') warnings.push({ field: 'DGS2', message: seriesLabels['DGS2'] });
+  if (y5.status === 'rejected') warnings.push({ field: 'DGS5', message: seriesLabels['DGS5'] });
+  if (y10.status === 'rejected') warnings.push({ field: 'DGS10', message: seriesLabels['DGS10'] });
+  if (y20.status === 'rejected') warnings.push({ field: 'DGS20', message: seriesLabels['DGS20'] });
+  if (y30.status === 'rejected') warnings.push({ field: 'DGS30', message: seriesLabels['DGS30'] });
+
+  const data: FredTreasuryYields = { y2: y2Val, y5: y5Val, y10: y10Val, y20: y20Val, y30: y30Val };
+  const source = warnings.length > 0 ? 'partial' : 'live';
+
+  return { status: 'ok', data, source, timestamp: Date.now(), warnings: warnings.length > 0 ? warnings : undefined };
 }
 
-export async function getFredTipsBreakeven(): Promise<number | null> {
-  return fetchLatestValue('T10YIE');
+export async function getFredTipsBreakeven(): Promise<DataResult<number | null>> {
+  try {
+    const value = await fetchLatestValue('T10YIE');
+    return { status: 'ok', data: value, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
 
-export async function getFredVix(): Promise<number | null> {
-  return fetchLatestValue('VIXCLS');
+export async function getFredVix(): Promise<DataResult<number | null>> {
+  try {
+    const value = await fetchLatestValue('VIXCLS');
+    return { status: 'ok', data: value, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
 
 export type CreditItem = {
@@ -93,16 +154,31 @@ export type CreditItem = {
   series: TimeSeriesPoint[];
 };
 
-export async function getLiveCreditSpreads(): Promise<CreditItem[]> {
+export async function getLiveCreditSpreads(): Promise<DataResult<CreditItem[]>> {
+  const warnings: ResultWarning[] = [];
+
   try {
-    const [hySeries, igSeries] = await Promise.all([
+    const [hyResult, igResult] = await Promise.allSettled([
       fetchSeries('BAMLH0A0HYM2', 365),
       fetchSeries('BAMLC0A0CM', 365),
     ]);
 
-    const hyLast = hySeries[hySeries.length - 1]?.value ?? mockMarketData.credit[0].value;
+    const hyFailed = hyResult.status === 'rejected';
+    const igFailed = igResult.status === 'rejected';
+
+    if (hyFailed && igFailed) {
+      return { status: 'error', error: toUserMessage('server_error'), source: 'fallback', timestamp: Date.now() };
+    }
+
+    const hySeries = hyFailed ? [] : hyResult.value;
+    const igSeries = igFailed ? [] : igResult.value;
+
+    if (hyFailed) warnings.push({ field: 'BAMLH0A0HYM2', message: 'HY OAS series unavailable' });
+    if (igFailed) warnings.push({ field: 'BAMLC0A0CM', message: 'IG OAS series unavailable' });
+
+    const hyLast = hySeries[hySeries.length - 1]?.value ?? 0;
     const hyPrev = hySeries[hySeries.length - 2]?.value ?? hyLast;
-    const igLast = igSeries[igSeries.length - 1]?.value ?? mockMarketData.credit[1].value;
+    const igLast = igSeries[igSeries.length - 1]?.value ?? 0;
     const igPrev = igSeries[igSeries.length - 2]?.value ?? igLast;
 
     const diffSeries: TimeSeriesPoint[] = hySeries.map((p, i) => ({
@@ -110,7 +186,7 @@ export async function getLiveCreditSpreads(): Promise<CreditItem[]> {
       value: parseFloat((p.value - (igSeries[i]?.value ?? p.value)).toFixed(1)),
     }));
 
-    return [
+    const items: CreditItem[] = [
       { label: 'HY OAS Spread', value: hyLast, change: parseFloat((hyLast - hyPrev).toFixed(1)), series: hySeries },
       { label: 'IG OAS Spread', value: igLast, change: parseFloat((igLast - igPrev).toFixed(1)), series: igSeries },
       {
@@ -120,8 +196,14 @@ export async function getLiveCreditSpreads(): Promise<CreditItem[]> {
         series: diffSeries,
       },
     ];
-  } catch {
-    return mockMarketData.credit;
+
+    const source = warnings.length > 0 ? 'partial' : 'live';
+    return { status: 'ok', data: items, source, timestamp: Date.now(), warnings: warnings.length > 0 ? warnings : undefined };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
   }
 }
 
@@ -179,9 +261,7 @@ async function getLevelSeriesWithDate(seriesId: string): Promise<{
   return { value: parseFloat(last.value.toFixed(2)), series: raw.slice(-24), dataThrough: last.date };
 }
 
-export async function getLiveInflation(): Promise<InflationItem[]> {
-  const fb = mockMarketData.inflation;
-
+export async function getLiveInflation(): Promise<DataResult<InflationItem[]>> {
   const [cpi, coreCpi, pce, corePce, breakeven5y, breakeven1y] = await Promise.allSettled([
     getInflationSeries('CPIAUCSL'),
     getInflationSeries('CPILFESL'),
@@ -191,42 +271,63 @@ export async function getLiveInflation(): Promise<InflationItem[]> {
     getLevelSeriesWithDate('EXPINF1YR'),
   ]);
 
+  const allFailed = [cpi, coreCpi, pce, corePce, breakeven5y, breakeven1y].every(r => r.status === 'rejected');
+  if (allFailed) {
+    return { status: 'error', error: toUserMessage('server_error'), source: 'fallback', timestamp: Date.now() };
+  }
+
+  const warnings: ResultWarning[] = [];
+  const allResults: [PromiseSettledResult<unknown>, string][] = [
+    [cpi, 'CPIAUCSL'],
+    [coreCpi, 'CPILFESL'],
+    [pce, 'PCEPI'],
+    [corePce, 'PCEPILFE'],
+    [breakeven5y, 'T5YIE'],
+    [breakeven1y, 'EXPINF1YR'],
+  ];
+
+  for (const [result, seriesId] of allResults) {
+    if (result.status === 'rejected') {
+      warnings.push({ field: seriesId, message: `${seriesId} series unavailable` });
+    }
+  }
+
   function formatDate(d: string) {
     const dt = new Date(d + 'T00:00:00');
     return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   }
 
-  return [
+  const items: InflationItem[] = [
     {
       label: 'CPI',
       sublabel: 'YoY % chg · All Items',
-      value: cpi.status === 'fulfilled' ? cpi.value.yoy : fb[0].value,
+      value: cpi.status === 'fulfilled' ? cpi.value.yoy : 0,
       mom: cpi.status === 'fulfilled' ? cpi.value.mom : null,
-      series: cpi.status === 'fulfilled' ? cpi.value.series : fb[0].series,
+      series: cpi.status === 'fulfilled' ? cpi.value.series : [],
       dataThrough: cpi.status === 'fulfilled' ? formatDate(cpi.value.dataThrough) : '—',
     },
     {
       label: 'Core CPI',
       sublabel: 'YoY % chg · Ex Food & Energy',
-      value: coreCpi.status === 'fulfilled' ? coreCpi.value.yoy : fb[1].value,
+      value: coreCpi.status === 'fulfilled' ? coreCpi.value.yoy : 0,
       mom: coreCpi.status === 'fulfilled' ? coreCpi.value.mom : null,
-      series: coreCpi.status === 'fulfilled' ? coreCpi.value.series : fb[1].series,
+      series: coreCpi.status === 'fulfilled' ? coreCpi.value.series : [],
       dataThrough: coreCpi.status === 'fulfilled' ? formatDate(coreCpi.value.dataThrough) : '—',
     },
     {
       label: 'PCE',
       sublabel: 'YoY % chg · All Items',
-      value: pce.status === 'fulfilled' ? pce.value.yoy : fb[2].value,
+      value: pce.status === 'fulfilled' ? pce.value.yoy : 0,
       mom: pce.status === 'fulfilled' ? pce.value.mom : null,
-      series: pce.status === 'fulfilled' ? pce.value.series : fb[2].series,
+      series: pce.status === 'fulfilled' ? pce.value.series : [],
       dataThrough: pce.status === 'fulfilled' ? formatDate(pce.value.dataThrough) : '—',
     },
     {
       label: 'Core PCE',
       sublabel: 'YoY % chg · Ex Food & Energy',
-      value: corePce.status === 'fulfilled' ? corePce.value.yoy : fb[3].value,
+      value: corePce.status === 'fulfilled' ? corePce.value.yoy : 0,
       mom: corePce.status === 'fulfilled' ? corePce.value.mom : null,
-      series: corePce.status === 'fulfilled' ? corePce.value.series : fb[3].series,
+      series: corePce.status === 'fulfilled' ? corePce.value.series : [],
       dataThrough: corePce.status === 'fulfilled' ? formatDate(corePce.value.dataThrough) : '—',
     },
     {
@@ -246,6 +347,9 @@ export async function getLiveInflation(): Promise<InflationItem[]> {
       dataThrough: breakeven1y.status === 'fulfilled' ? formatDate(breakeven1y.value.dataThrough) : '—',
     },
   ];
+
+  const source = warnings.length > 0 ? 'partial' : 'live';
+  return { status: 'ok', data: items, source, timestamp: Date.now(), warnings: warnings.length > 0 ? warnings : undefined };
 }
 
 export type FedBalanceSheet = {
@@ -254,18 +358,31 @@ export type FedBalanceSheet = {
   mortgageBackedSecurities: number | null;
 };
 
-export async function getFredFedBalanceSheet(): Promise<FedBalanceSheet> {
+export async function getFredFedBalanceSheet(): Promise<DataResult<FedBalanceSheet>> {
   const [walcl, treast, wshomcb] = await Promise.allSettled([
     fetchLatestValue('WALCL'),
     fetchLatestValue('TREAST'),
     fetchLatestValue('WSHOMCB'),
   ]);
 
-  return {
+  const allFailed = [walcl, treast, wshomcb].every(r => r.status === 'rejected');
+  if (allFailed) {
+    return { status: 'error', error: toUserMessage('server_error'), source: 'fallback', timestamp: Date.now() };
+  }
+
+  const warnings: ResultWarning[] = [];
+  if (walcl.status === 'rejected') warnings.push({ field: 'WALCL', message: 'Total assets series unavailable' });
+  if (treast.status === 'rejected') warnings.push({ field: 'TREAST', message: 'Treasuries series unavailable' });
+  if (wshomcb.status === 'rejected') warnings.push({ field: 'WSHOMCB', message: 'MBS series unavailable' });
+
+  const data: FedBalanceSheet = {
     totalAssets: walcl.status === 'fulfilled' ? walcl.value : null,
     treasuries: treast.status === 'fulfilled' ? treast.value : null,
     mortgageBackedSecurities: wshomcb.status === 'fulfilled' ? wshomcb.value : null,
   };
+
+  const source = warnings.length > 0 ? 'partial' : 'live';
+  return { status: 'ok', data, source, timestamp: Date.now(), warnings: warnings.length > 0 ? warnings : undefined };
 }
 
 const YIELD_CURVE_MATURITIES = [
@@ -282,25 +399,34 @@ const YIELD_CURVE_MATURITIES = [
   { maturity: '30Y', seriesId: 'DGS30' },
 ];
 
-export async function getFredYieldCurve(): Promise<YieldCurveData[] | null> {
+export async function getFredYieldCurve(): Promise<DataResult<YieldCurveData[]>> {
   try {
     const results = await Promise.allSettled(
       YIELD_CURVE_MATURITIES.map(({ seriesId }) => fetchLatestValue(seriesId))
     );
 
-    return YIELD_CURVE_MATURITIES.map(({ maturity }, i) => {
+    const warnings: ResultWarning[] = [];
+    const data: YieldCurveData[] = YIELD_CURVE_MATURITIES.map(({ maturity }, i) => {
       const result = results[i];
       const current = result.status === 'fulfilled' ? result.value : null;
-      const fb = mockMarketData.yieldCurve.find(p => p.maturity === maturity) ?? mockMarketData.yieldCurve[0];
+      if (current === null) {
+        warnings.push({ field: maturity, message: `${maturity} yield unavailable` });
+      }
       return {
         maturity,
-        current: current ?? fb.current,
-        oneMonthAgo: fb.oneMonthAgo,
-        oneYearAgo: fb.oneYearAgo,
+        current: current ?? 0,
+        oneMonthAgo: 0,
+        oneYearAgo: 0,
       };
     });
-  } catch {
-    return null;
+
+    const source = warnings.length > 0 ? 'partial' : 'live';
+    return { status: 'ok', data, source, timestamp: Date.now(), warnings: warnings.length > 0 ? warnings : undefined };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
   }
 }
 
@@ -314,6 +440,10 @@ async function fetchYieldOnDate(seriesId: string, targetDate: string): Promise<n
   const cacheKey = `fred:yield:${seriesId}:${targetDate}`;
   const cached = cache.get<number>(cacheKey);
   if (cached !== null && cached !== undefined) return cached;
+
+  if (rateLimiter.isBlocked('fred')) {
+    return null;
+  }
 
   const target = new Date(targetDate);
   const startDate = new Date(target);
@@ -329,10 +459,20 @@ async function fetchYieldOnDate(seriesId: string, targetDate: string): Promise<n
   url.searchParams.set('limit', '5');
 
   const res = await fetch(url.toString());
+
+  if (res.status === 429) {
+    rateLimiter.onRateLimit('fred');
+    return null;
+  }
+
   if (!res.ok) return null;
 
-  const json: FredResponse = await res.json();
-  const valid = json.observations.filter(o => o.value !== '.').reverse();
+  rateLimiter.onSuccess('fred');
+  const json = await res.json();
+  const parsed = FredResponseSchema.safeParse(json);
+  if (!parsed.success) return null;
+
+  const valid = parsed.data.observations.filter(o => o.value !== '.').reverse();
   if (valid.length === 0) return null;
 
   const value = parseFloat(valid[0].value);
@@ -340,7 +480,7 @@ async function fetchYieldOnDate(seriesId: string, targetDate: string): Promise<n
   return value;
 }
 
-export async function getFredYieldCurveOverlays(currentCurve: YieldCurveData[]): Promise<YieldCurveData[]> {
+export async function getFredYieldCurveOverlays(currentCurve: YieldCurveData[]): Promise<DataResult<YieldCurveData[]>> {
   try {
     const oneMonthAgoDate = isoDateOffset(-30);
     const oneYearAgoDate = isoDateOffset(-365);
@@ -356,13 +496,17 @@ export async function getFredYieldCurveOverlays(currentCurve: YieldCurveData[]):
     );
 
     const overlayMap = new Map<string, { oneMonthAgo: number | null; oneYearAgo: number | null }>();
+    const warnings: ResultWarning[] = [];
+
     for (const r of results) {
       if (r.status === 'fulfilled') {
         overlayMap.set(r.value.maturity, { oneMonthAgo: r.value.oneMonthAgo, oneYearAgo: r.value.oneYearAgo });
+      } else {
+        warnings.push({ field: 'overlay', message: 'Some yield curve overlay data unavailable' });
       }
     }
 
-    return currentCurve.map(point => {
+    const data = currentCurve.map(point => {
       const overlay = overlayMap.get(point.maturity);
       return {
         ...point,
@@ -370,7 +514,10 @@ export async function getFredYieldCurveOverlays(currentCurve: YieldCurveData[]):
         oneYearAgo: overlay?.oneYearAgo ?? point.oneYearAgo,
       };
     });
+
+    const source = warnings.length > 0 ? 'partial' : 'live';
+    return { status: 'ok', data, source, timestamp: Date.now(), warnings: warnings.length > 0 ? warnings : undefined };
   } catch {
-    return currentCurve;
+    return { status: 'ok', data: currentCurve, source: 'partial', timestamp: Date.now(), warnings: [{ field: 'overlays', message: 'Overlay data unavailable' }] };
   }
 }
