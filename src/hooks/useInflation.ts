@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WidgetStatus } from '../types';
+import { WidgetStatus, DataSource } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getLiveInflation, InflationItem } from '../services/fredService';
 import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
@@ -10,11 +10,15 @@ export interface InflationHookResult {
   data: InflationItem[];
   status: WidgetStatus;
   fetch: (forceRefresh?: boolean) => Promise<void>;
+  lastFetched: number;
+  source: DataSource;
 }
 
 export function useInflation(): InflationHookResult {
   const [data, setData] = useState<InflationItem[]>(mockMarketData.inflation);
   const [status, setStatus] = useState<WidgetStatus>(loadingStatus);
+  const [lastFetched, setLastFetched] = useState<number>(0);
+  const [source, setSource] = useState<DataSource>('fallback');
   const lastInflationDate = useRef<string>('');
 
   const fetch = useCallback(async (forceRefresh = false) => {
@@ -35,6 +39,8 @@ export function useInflation(): InflationHookResult {
 
       lastInflationDate.current = latestDate;
       setData(inflation);
+      setLastFetched(Date.now());
+      setSource(result.source);
       setStatus(result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
@@ -47,5 +53,5 @@ export function useInflation(): InflationHookResult {
     return () => clearInterval(interval);
   }, [fetch]);
 
-  return { data, status, fetch };
+  return { data, status, fetch, lastFetched, source };
 }

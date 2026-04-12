@@ -119,6 +119,10 @@ export class WebSocketManager {
     this.connect();
   }
 
+  getAttempt(): number {
+    return this.attempt;
+  }
+
   disconnect(): void {
     this.stopHeartbeat();
     if (this.reconnectTimer) {

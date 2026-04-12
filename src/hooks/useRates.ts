@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { PriceItem, ResultWarning, WidgetStatus } from '../types';
+import { PriceItem, ResultWarning, WidgetStatus, DataSource } from '../types';
 import { mockMarketData } from '../data/mockData';
 import { getTwelveRates } from '../services/twelveDataService';
 import {
@@ -18,6 +18,8 @@ export interface RatesHookResult {
   fetch: () => Promise<void>;
   y10Val: number | null;
   vix: number | null;
+  lastFetched: number;
+  source: DataSource;
 }
 
 export function useRates(): RatesHookResult {
@@ -25,6 +27,8 @@ export function useRates(): RatesHookResult {
   const [status, setStatus] = useState<WidgetStatus>(loadingStatus);
   const [y10Val, setY10Val] = useState<number | null>(null);
   const [vix, setVix] = useState<number | null>(null);
+  const [lastFetched, setLastFetched] = useState<number>(0);
+  const [source, setSource] = useState<DataSource>('fallback');
 
   const fetch = useCallback(async () => {
     setStatus(loadingStatus);
@@ -96,6 +100,9 @@ export function useRates(): RatesHookResult {
       setData(rates);
       setY10Val(computedY10Val);
       setVix(vixVal);
+      setLastFetched(Date.now());
+      const combinedSource: DataSource = warnings.length > 0 ? 'partial' : 'live';
+      setSource(combinedSource);
       setStatus(warnings.length ? warnedStatus(warnings) : loadedStatus);
     } catch (e) {
       setStatus(errorStatus(e instanceof Error ? e.message : 'Failed to load'));
@@ -108,5 +115,5 @@ export function useRates(): RatesHookResult {
     return () => clearInterval(interval);
   }, [fetch]);
 
-  return { data, status, fetch, y10Val, vix };
+  return { data, status, fetch, y10Val, vix, lastFetched, source };
 }

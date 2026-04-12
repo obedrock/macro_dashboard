@@ -124,3 +124,8 @@ export interface ResultWarning {
 export type DataResult<T> =
   | { status: 'ok'; data: T; source: DataSource; timestamp: number; warnings?: ResultWarning[] }
   | { status: 'error'; error: string; source: DataSource; timestamp: number };
+
+// --- Phase 5: UI Transparency ---
+
+export type WidgetTimestamps = Record<keyof WidgetStatuses, number>;
+export type WidgetSources = Record<keyof WidgetStatuses, DataSource>;
