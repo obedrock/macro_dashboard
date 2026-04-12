@@ -145,6 +145,16 @@ function toItem(q: TdQuote, fallback: PriceItem, label: string): PriceItem {
   return { ...fallback, label, value, change, changePct };
 }
 
+function etfScaled(q: TdQuote | null, fb: PriceItem, label: string, mult: number): PriceItem {
+  if (!q) return fb;
+  return {
+    ...fb, label,
+    value: parseFloat((parseFloat(q.close) * mult).toFixed(2)),
+    change: parseFloat((parseFloat(q.change) * mult).toFixed(2)),
+    changePct: parseFloat(q.percent_change),
+  };
+}
+
 function wsToItem(sym: string, fallback: PriceItem, label: string, valueMultiplier = 1): PriceItem {
   const wsPrice = lastPrices[sym];
   const prev = prevPrices[sym];
@@ -156,30 +166,15 @@ function wsToItem(sym: string, fallback: PriceItem, label: string, valueMultipli
 }
 
 export async function getTwelveEquities(): Promise<PriceItem[]> {
-  const [spy, qqq, dia, iwm] = await Promise.allSettled([
-    fetchSingleQuote('SPY'),
-    fetchSingleQuote('QQQ'),
-    fetchSingleQuote('DIA'),
-    fetchSingleQuote('IWM'),
-  ]);
+  const symbols = ['SPY', 'QQQ', 'DIA', 'IWM'];
+  const batch = await fetchBatchQuotes(symbols);
   const fb = mockMarketData.equities;
 
-  function etfScaled(q: TdQuote | null, fb: PriceItem, label: string, mult: number): PriceItem {
-    if (!q) return fb;
-    return {
-      ...fb, label,
-      value: parseFloat((parseFloat(q.close) * mult).toFixed(2)),
-      change: parseFloat((parseFloat(q.change) * mult).toFixed(2)),
-      changePct: parseFloat(q.percent_change),
-    };
-  }
-
-  const spyQ = spy.status === 'fulfilled' ? spy.value : null;
-  const qqqQ = qqq.status === 'fulfilled' ? qqq.value : null;
-  const diaQ = dia.status === 'fulfilled' ? dia.value : null;
-  const iwmQ = iwm.status === 'fulfilled' ? iwm.value : null;
-
-  const vixFallback = mockMarketData.equities[4];
+  const spyQ = isTdQuote(batch['SPY']) ? batch['SPY'] : null;
+  const qqqQ = isTdQuote(batch['QQQ']) ? batch['QQQ'] : null;
+  const diaQ = isTdQuote(batch['DIA']) ? batch['DIA'] : null;
+  const iwmQ = isTdQuote(batch['IWM']) ? batch['IWM'] : null;
+  const vixFallback = fb[4];
 
   return [
     etfScaled(spyQ, fb[0], 'S&P 500', 10),
@@ -259,19 +254,14 @@ export type TwelveRatesResult = {
 };
 
 export async function getTwelveRates(): Promise<TwelveRatesResult> {
-  const [y2Q, y5Q, y10Q, y20Q, y30Q] = await Promise.allSettled([
-    fetchSingleQuote('US2Y'),
-    fetchSingleQuote('US5Y'),
-    fetchSingleQuote('US10Y'),
-    fetchSingleQuote('US20Y'),
-    fetchSingleQuote('US30Y'),
-  ]);
+  const symbols = ['US2Y', 'US5Y', 'US10Y', 'US20Y', 'US30Y'];
+  const batch = await fetchBatchQuotes(symbols);
 
-  const y2 = y2Q.status === 'fulfilled' ? y2Q.value : null;
-  const y5 = y5Q.status === 'fulfilled' ? y5Q.value : null;
-  const y10 = y10Q.status === 'fulfilled' ? y10Q.value : null;
-  const y20 = y20Q.status === 'fulfilled' ? y20Q.value : null;
-  const y30 = y30Q.status === 'fulfilled' ? y30Q.value : null;
+  const y2 = isTdQuote(batch['US2Y']) ? batch['US2Y'] : null;
+  const y5 = isTdQuote(batch['US5Y']) ? batch['US5Y'] : null;
+  const y10 = isTdQuote(batch['US10Y']) ? batch['US10Y'] : null;
+  const y20 = isTdQuote(batch['US20Y']) ? batch['US20Y'] : null;
+  const y30 = isTdQuote(batch['US30Y']) ? batch['US30Y'] : null;
 
   return {
     y2Val: y2 ? parseFloat(parseFloat(y2.close).toFixed(3)) : null,
