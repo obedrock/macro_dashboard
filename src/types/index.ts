@@ -92,6 +92,8 @@ export interface MarketData {
 
 export type WidgetLoadState = 'loading' | 'loaded' | 'error';
 
+export type WsStatus = 'connected' | 'connecting' | 'reconnecting' | 'failed';
+
 export interface WidgetStatus {
   state: WidgetLoadState;
   error?: string;
