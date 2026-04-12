@@ -37,11 +37,11 @@
 
 ### UI Transparency
 
-- [ ] **UI-01**: Per-widget "Updated X min ago" freshness timestamps
-- [ ] **UI-02**: Fallback data badge — clearly marks when data is mock/cached vs live
-- [ ] **UI-03**: WebSocket connection status indicator (connected/reconnecting/failed) in ribbon
-- [ ] **UI-04**: Market hours context — "Market closed" label when outside trading hours
-- [ ] **UI-05**: Degraded mode label when serving from cache ("Cached X min ago")
+- [x] **UI-01**: Per-widget "Updated X min ago" freshness timestamps
+- [x] **UI-02**: Fallback data badge — clearly marks when data is mock/cached vs live
+- [x] **UI-03**: WebSocket connection status indicator (connected/reconnecting/failed) in ribbon
+- [x] **UI-04**: Market hours context — "Market closed" label when outside trading hours
+- [x] **UI-05**: Degraded mode label when serving from cache ("Cached X min ago")
 
 ### Testing
 
@@ -101,11 +101,11 @@
 | ARCH-02 | Phase 4 | Complete |
 | ARCH-03 | Phase 4 | Complete |
 | ARCH-04 | Phase 4 | Complete |
-| UI-01 | Phase 5 | Pending |
-| UI-02 | Phase 5 | Pending |
-| UI-03 | Phase 5 | Pending |
-| UI-04 | Phase 5 | Pending |
-| UI-05 | Phase 5 | Pending |
+| UI-01 | Phase 5 | Complete |
+| UI-02 | Phase 5 | Complete |
+| UI-03 | Phase 5 | Complete |
+| UI-04 | Phase 5 | Complete |
+| UI-05 | Phase 5 | Complete |
 | TEST-01 | Phase 6 | Pending |
 | TEST-02 | Phase 6 | Pending |
 | TEST-03 | Phase 6 | Pending |

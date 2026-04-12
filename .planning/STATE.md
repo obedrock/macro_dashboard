@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-12T07:31:24.216Z"
+status: Ready to execute
+stopped_at: Completed 05-ui-transparency 05-01-PLAN.md
+last_updated: "2026-04-12T08:14:00.249Z"
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** All panels reliably display real, current market data with clear indication of data freshness and error states — no silent failures, no ambiguous mock data
-**Current focus:** Phase 04 — architecture-decomposition
+**Current focus:** Phase 05 — ui-transparency
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (ui-transparency) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Plan: Not started
 | Phase 03-websocket-reliability P03 | 300 | 1 tasks | 2 files |
 | Phase 04-architecture-decomposition P01 | 142 | 2 tasks | 11 files |
 | Phase 04-architecture-decomposition P02 | 480 | 2 tasks | 15 files |
+| Phase 05-ui-transparency P01 | 900 | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 04-architecture-decomposition]: ResultWarning type added to types/index.ts per CLAUDE.md convention (domain types are named exports from src/types/index.ts)
 - [Phase 04-architecture-decomposition]: Domain hooks fixed to handle DataResult<T> before wiring into context — Plan 01 hooks used pre-Phase-02 service API
 - [Phase 04-architecture-decomposition]: Duplicate ResultWarning removed from types/index.ts — was defined twice silently
+- [Phase 05-ui-transparency]: Multi-source hooks (useRates, useYields, useCalendar) derive DataSource as 'partial' when warnings present and 'live' otherwise
+- [Phase 05-ui-transparency]: useInflation early-return (same dataThrough date) intentionally skips setLastFetched since no actual data refresh occurred
+- [Phase 05-ui-transparency]: ribbonLastFetched only updates on key WS symbol ticks (SPY, CL1:COM, XAU/USD) to avoid excessive state updates
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T07:31:24.207Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-ui-transparency/05-CONTEXT.md
+Last session: 2026-04-12T08:14:00.245Z
+Stopped at: Completed 05-ui-transparency 05-01-PLAN.md
+Resume file: None

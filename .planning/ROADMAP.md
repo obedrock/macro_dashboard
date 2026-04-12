@@ -93,7 +93,7 @@ Plans:
   5. Widgets serving from a degraded cache show "Cached X min ago" rather than presenting stale data as fresh
 **Plans**: 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — Types, utility, components, hook extensions, and context composition for UI transparency
+- [x] 05-01-PLAN.md — Types, utility, components, hook extensions, and context composition for UI transparency
 - [ ] 05-02-PLAN.md — Wire freshness labels, badges, WS indicator, and market hours into UI
 **UI hint**: yes
 
@@ -123,5 +123,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Data Layer Hardening | 3/3 | Complete   | 2026-04-12 |
 | 3. WebSocket Reliability | 2/3 | Gap closure | 2026-04-12 |
 | 4. Architecture Decomposition | 2/2 | Complete   | 2026-04-12 |
-| 5. UI Transparency | 0/2 | Planning complete | - |
+| 5. UI Transparency | 1/2 | In Progress|  |
 | 6. Test Infrastructure | 0/TBD | Not started | - |
