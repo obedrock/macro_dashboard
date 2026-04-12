@@ -12,7 +12,7 @@ import BottomNav from './components/layout/BottomNav';
 import ExpandedModal from './components/layout/ExpandedModal';
 
 function DashboardApp() {
-  const { data, statuses, loading, lastUpdated, refresh, retryWidget } = useMarketData();
+  const { data, statuses, loading, lastUpdated, refresh, retryWidget, wsStatus } = useMarketData();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedWidget, setExpandedWidget] = useState<WidgetId | null>(null);
   const { isDark } = useTheme();
@@ -26,6 +26,7 @@ function DashboardApp() {
         loading={loading}
         ribbonStatus={statuses.ribbon}
         onRefresh={refresh}
+        wsStatus={wsStatus}
       />
 
       <main className="max-w-screen-2xl mx-auto px-3 sm:px-4 xl:px-6 py-5 pb-20 md:pb-6">
