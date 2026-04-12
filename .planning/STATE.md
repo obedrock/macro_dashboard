@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 02-data-layer-hardening 02-01-PLAN.md
-last_updated: "2026-04-12T03:20:38.908Z"
+stopped_at: Completed 02-data-layer-hardening 02-02-PLAN.md
+last_updated: "2026-04-12T03:34:20.989Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 02 (data-layer-hardening) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Plan: 2 of 3
 | Phase 01-cleanup P02 | 98s | 2 tasks | 1 files |
 | Phase 01-cleanup P01 | 12 | 2 tasks | 6 files |
 | Phase 02-data-layer-hardening P01 | 8 | 2 tasks | 6 files |
+| Phase 02-data-layer-hardening P02 | 643 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [Phase 01-cleanup]: Use Intl.DateTimeFormat formatToParts with America/New_York for DST-safe ET scheduling
 - [Phase 02-data-layer-hardening]: Use zod@4 for API validation schemas with .passthrough() to tolerate schema drift
 - [Phase 02-data-layer-hardening]: DataResult<T> discriminated union with 'partial' DataSource for mixed-quality responses
+- [Phase 02-data-layer-hardening]: Internal helpers throw on failure; only exported functions return DataResult (avoids double-wrapping errors)
+- [Phase 02-data-layer-hardening]: Partial success pattern: Promise.allSettled + warnings array + source: partial when some FRED sources fail
+- [Phase 02-data-layer-hardening]: getFredYieldCurve returns DataResult<YieldCurveData[]> with 0-value placeholders for missing maturities (not null)
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T03:20:38.904Z
-Stopped at: Completed 02-data-layer-hardening 02-01-PLAN.md
+Last session: 2026-04-12T03:34:20.985Z
+Stopped at: Completed 02-data-layer-hardening 02-02-PLAN.md
 Resume file: None

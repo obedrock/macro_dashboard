@@ -48,7 +48,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 02-01-PLAN.md — Foundation: DataResult types, RateLimiter, error messages, Zod schemas
-- [ ] 02-02-PLAN.md — Service migration: all services return DataResult with validation
+- [x] 02-02-PLAN.md — Service migration: all services return DataResult with validation
 - [ ] 02-03-PLAN.md — Hook adaptation: useMarketData unwraps DataResult
 
 ### Phase 3: WebSocket Reliability
