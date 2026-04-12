@@ -45,10 +45,11 @@ Plans:
   3. When an API response fails Zod schema validation, the widget shows an error state rather than rendering NaN or undefined values
   4. When one source in a multi-source widget fails, the widget renders available data with a visible warning rather than going fully blank
   5. Error messages shown to the user are human-readable (e.g., "Data unavailable — rate limit reached") not raw HTTP status codes
-**Plans**: 2 plans
+**Plans**: 3 plans
 Plans:
-- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
-- [x] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
+- [ ] 02-01-PLAN.md — Foundation: DataResult types, RateLimiter, error messages, Zod schemas
+- [ ] 02-02-PLAN.md — Service migration: all services return DataResult with validation
+- [ ] 02-03-PLAN.md — Hook adaptation: useMarketData unwraps DataResult
 
 ### Phase 3: WebSocket Reliability
 **Goal**: WebSocket connections recover automatically from drops with bounded retry behavior and visible connection state
@@ -61,8 +62,8 @@ Plans:
   4. No mutable global variables for lastPrices or prevPrices are exported — price state is encapsulated inside WebSocketManager
 **Plans**: 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
-- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
+- [ ] 03-01-PLAN.md — [to be planned]
+- [ ] 03-02-PLAN.md — [to be planned]
 
 ### Phase 4: Architecture Decomposition
 **Goal**: The monolithic useMarketData hook is broken into composable domain hooks, with error boundaries ensuring widget failures are isolated
@@ -75,8 +76,8 @@ Plans:
   4. Polling intervals do not re-register on every render — useEffect dependency arrays are stable and intervals fire at their intended cadence
 **Plans**: 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
-- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
+- [ ] 04-01-PLAN.md — [to be planned]
+- [ ] 04-02-PLAN.md — [to be planned]
 **UI hint**: yes
 
 ### Phase 5: UI Transparency
@@ -91,8 +92,8 @@ Plans:
   5. Widgets serving from a degraded cache show "Cached X min ago" rather than presenting stale data as fresh
 **Plans**: 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
-- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
+- [ ] 05-01-PLAN.md — [to be planned]
+- [ ] 05-02-PLAN.md — [to be planned]
 **UI hint**: yes
 
 ### Phase 6: Test Infrastructure
@@ -107,8 +108,8 @@ Plans:
   5. WebSocket reconnection tests verify backoff timing and the "gave up" terminal state after 10 attempts
 **Plans**: 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Remove dead Massive/Supabase integrations + fix DST scheduling bug
-- [ ] 01-02-PLAN.md — Batch TwelveData calls + fix DXY/Brent data fabrication
+- [ ] 06-01-PLAN.md — [to be planned]
+- [ ] 06-02-PLAN.md — [to be planned]
 
 ## Progress
 
@@ -118,7 +119,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Cleanup | 2/2 | Complete   | 2026-04-12 |
-| 2. Data Layer Hardening | 0/TBD | Not started | - |
+| 2. Data Layer Hardening | 0/3 | Not started | - |
 | 3. WebSocket Reliability | 0/TBD | Not started | - |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |
 | 5. UI Transparency | 0/TBD | Not started | - |
