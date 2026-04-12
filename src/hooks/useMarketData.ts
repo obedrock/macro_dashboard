@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MarketData, WidgetStatuses, WidgetStatus, PriceItem, ResultWarning } from '../types';
+import { MarketData, WidgetStatuses, WidgetStatus, PriceItem, ResultWarning, WsStatus } from '../types';
 import { mockMarketData } from '../data/mockData';
 import {
   getTwelveEquities,
@@ -7,8 +7,8 @@ import {
   getTwelveCommodities,
   getTwelveRates,
   buildRibbonFromWs,
-  subscribeWebSocket,
 } from '../services/twelveDataService';
+import { wsManager } from '../services/wsManager';
 import {
   getFinnhubNews,
   getFinnhubEconomicCalendar,
@@ -83,6 +83,7 @@ export function useMarketData() {
   const [data, setData] = useState<MarketData>(mockMarketData);
   const [statuses, setStatuses] = useState<WidgetStatuses>(DEFAULT_STATUSES);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [wsStatus, setWsStatus] = useState<WsStatus>('connecting');
   const ribbonBase = useRef<MarketData['ribbon']>(mockMarketData.ribbon);
   const lastInflationDate = useRef<string>('');
 
@@ -345,7 +346,7 @@ export function useMarketData() {
 
   useEffect(() => {
     setStatus('ribbon', loadingStatus);
-    const unsubscribe = subscribeWebSocket((update) => {
+    const unsubTick = wsManager.subscribe((update) => {
       setData(prev => {
         if (update.symbol === 'SPY' || update.symbol === 'CL1:COM' || update.symbol === 'XAU/USD') {
           const newRibbon = buildRibbonFromWs(ribbonBase.current);
@@ -356,6 +357,7 @@ export function useMarketData() {
         return prev;
       });
     });
+    const unsubStatus = wsManager.onStatusChange(setWsStatus);
 
     setTimeout(() => {
       setStatuses(prev => ({
@@ -364,7 +366,10 @@ export function useMarketData() {
       }));
     }, 8000);
 
-    return unsubscribe;
+    return () => {
+      unsubTick();
+      unsubStatus();
+    };
   }, []);
 
   useEffect(() => {
@@ -435,5 +440,5 @@ export function useMarketData() {
 
   const loading = Object.values(statuses).some(s => s.state === 'loading');
 
-  return { data, statuses, loading, lastUpdated, refresh, retryWidget };
+  return { data, statuses, loading, lastUpdated, refresh, retryWidget, wsStatus };
 }
