@@ -94,7 +94,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 05-01-PLAN.md — Types, utility, components, hook extensions, and context composition for UI transparency
-- [ ] 05-02-PLAN.md — Wire freshness labels, badges, WS indicator, and market hours into UI
+- [x] 05-02-PLAN.md — Wire freshness labels, badges, WS indicator, and market hours into UI
 **UI hint**: yes
 
 ### Phase 6: Test Infrastructure

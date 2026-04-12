@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 05-ui-transparency 05-01-PLAN.md
-last_updated: "2026-04-12T08:14:00.249Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 05-ui-transparency 05-02-PLAN.md
+last_updated: "2026-04-12T08:19:09.911Z"
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -57,6 +57,7 @@ Plan: 2 of 2
 | Phase 04-architecture-decomposition P01 | 142 | 2 tasks | 11 files |
 | Phase 04-architecture-decomposition P02 | 480 | 2 tasks | 15 files |
 | Phase 05-ui-transparency P01 | 900 | 2 tasks | 15 files |
+| Phase 05-ui-transparency P02 | 480 | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase 05-ui-transparency]: Multi-source hooks (useRates, useYields, useCalendar) derive DataSource as 'partial' when warnings present and 'live' otherwise
 - [Phase 05-ui-transparency]: useInflation early-return (same dataThrough date) intentionally skips setLastFetched since no actual data refresh occurred
 - [Phase 05-ui-transparency]: ribbonLastFetched only updates on key WS symbol ticks (SPY, CL1:COM, XAU/USD) to avoid excessive state updates
+- [Phase 05-ui-transparency]: EquitiesPanel/YieldCurveChart compose freshnessNode into their own headerRight to avoid displacing existing selectors
+- [Phase 05-ui-transparency]: App.tsx reads wsManager.getAttempt() at render time, sufficient since wsStatus context change triggers re-render
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T08:14:00.245Z
-Stopped at: Completed 05-ui-transparency 05-01-PLAN.md
+Last session: 2026-04-12T08:19:09.907Z
+Stopped at: Completed 05-ui-transparency 05-02-PLAN.md
 Resume file: None
