@@ -102,11 +102,13 @@ A real-time macroeconomic dashboard built with React, TypeScript, and Vite. It a
 - Types always imported from `'../../types'` (relative from component) or `'../types'` (relative from hooks/services)
 - Explicit `import React` required (not using JSX transform auto-import)
 ## Error Handling
-- Always use `e instanceof Error ? e.message : 'Failed to load'` pattern before accessing `.message`
+- Service functions return `DataResult<T>` (discriminated union with `status: 'ok' | 'error'`) — errors propagate as typed results, not exceptions
+- `useMarketData` fetch callbacks unwrap DataResult via `result.status === 'error'` narrowing, not try/catch
+- Use `e instanceof Error ? e.message : 'Failed to load'` pattern only in infrastructure-level safety-net catches (not at the service boundary)
 - Bare `catch {}` (empty catch) is used in internal helpers where failure is non-critical (e.g., `fetchLatestValue`)
 - `Promise.allSettled` is preferred over `Promise.all` when partial failure is acceptable
-- Every service function falls back to `mockMarketData` values on failure
-- Mock data is imported from `src/data/mockData.ts` and used as the initial state in `useMarketData`
+- Every service function falls back to `DataResult` error on failure — no silent mock substitution
+- Human-readable error messages via `toUserMessage()` from `src/services/errorMessages.ts`
 - Widget statuses propagate `loading | loaded | error` state to UI via `WidgetStatus` type
 ## Logging
 - No `console.log`, `console.error`, or observability calls detected in production code
@@ -229,11 +231,14 @@ A real-time macroeconomic dashboard built with React, TypeScript, and Vite. It a
 - Triggers: Called in `DashboardApp` component body
 - Responsibilities: Mounts WebSocket, schedules all polling intervals, exposes `{ data, statuses, loading, lastUpdated, refresh, retryWidget }`
 ## Error Handling
-- Service functions wrap API calls in try/catch and return `mockMarketData` values on failure rather than rethrowing
-- `useMarketData` fetch callbacks catch errors, set `errorStatus(message)` for the relevant widget key
+- Service functions return `DataResult<T>` instead of raw `T` — discriminated union with `status: 'ok'` (data) or `status: 'error'` (message)
+- Internal service helpers (e.g., `fetchSeries`, `tdFetch`, `finnhubFetch`) throw on failure; exported functions catch and wrap in DataResult
+- `useMarketData` fetch callbacks unwrap DataResult via status narrowing and set per-widget `WidgetStatus`
 - `Widget` renders an `AlertCircle` + "Retry" button when `status.state === 'error'`
 - `retryWidget(key)` dispatches the appropriate fetch callback to allow per-widget manual retry
-- `Promise.allSettled` is used in multi-source fetches (e.g. `fetchRates`, `fetchCalendar`) so one failing source does not block others
+- `Promise.allSettled` is used in multi-source fetches; partial success returns `source: 'partial'` with warnings
+- Rate limit 429 responses trigger exponential backoff via `rateLimiter` singleton
+- Zod schemas validate all raw API responses; validation failures produce `DataResult.error`
 ## Cross-Cutting Concerns
 <!-- GSD:architecture-end -->
 

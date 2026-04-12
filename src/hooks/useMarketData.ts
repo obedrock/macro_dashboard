@@ -138,7 +138,7 @@ export function useMarketData() {
   const fetchRates = useCallback(async () => {
     setStatus('rates', loadingStatus);
     try {
-      const [tdRates, fredYields, fedFundsRate, tipsBreakeven, vix] = await Promise.all([
+      const [tdResult, fredYieldsResult, fedFundsResult, tipsResult, vixResult] = await Promise.all([
         getTwelveRates(),
         getFredTreasuryYields(),
         getFredFedFundsRate(),
@@ -146,13 +146,34 @@ export function useMarketData() {
         getFredVix(),
       ]);
 
+      const warnings: ResultWarning[] = [];
+      const tdRates = tdResult.status === 'ok' ? tdResult.data : null;
+      const fredYields = fredYieldsResult.status === 'ok' ? fredYieldsResult.data : null;
+      const fedFundsRate = fedFundsResult.status === 'ok' ? fedFundsResult.data : null;
+      const tipsBreakeven = tipsResult.status === 'ok' ? tipsResult.data : null;
+      const vix = vixResult.status === 'ok' ? vixResult.data : null;
+
+      if (tdResult.status === 'error') warnings.push({ field: 'twelvedata_rates', message: tdResult.error });
+      if (fredYieldsResult.status === 'error') warnings.push({ field: 'fred_yields', message: fredYieldsResult.error });
+      if (fedFundsResult.status === 'error') warnings.push({ field: 'fed_funds', message: fedFundsResult.error });
+      if (tipsResult.status === 'error') warnings.push({ field: 'tips', message: tipsResult.error });
+      if (vixResult.status === 'error') warnings.push({ field: 'vix', message: vixResult.error });
+
+      if (tdResult.status === 'ok' && tdResult.warnings?.length) warnings.push(...tdResult.warnings);
+      if (fredYieldsResult.status === 'ok' && fredYieldsResult.warnings?.length) warnings.push(...fredYieldsResult.warnings);
+
+      if (!tdRates && !fredYields) {
+        setStatus('rates', errorStatus(warnings.map(w => w.message).join('; ')));
+        return;
+      }
+
       const fb = mockMarketData.rates;
 
-      const y2Val = tdRates.y2Val ?? fredYields.y2 ?? fb[1].value;
-      const y5Val = tdRates.y5Val ?? fredYields.y5 ?? fb[2].value;
-      const y10Val = tdRates.y10Val ?? fredYields.y10 ?? fb[3].value;
-      const y20Val = tdRates.y20Val ?? fredYields.y20 ?? fb[4].value;
-      const y30Val = tdRates.y30Val ?? fredYields.y30 ?? fb[5].value;
+      const y2Val = tdRates?.y2Val ?? fredYields?.y2 ?? fb[1].value;
+      const y5Val = tdRates?.y5Val ?? fredYields?.y5 ?? fb[2].value;
+      const y10Val = tdRates?.y10Val ?? fredYields?.y10 ?? fb[3].value;
+      const y20Val = tdRates?.y20Val ?? fredYields?.y20 ?? fb[4].value;
+      const y30Val = tdRates?.y30Val ?? fredYields?.y30 ?? fb[5].value;
 
       const spread2s10s = parseFloat(((y10Val - y2Val) * 100).toFixed(1));
       const spread2s30s = parseFloat(((y30Val - y2Val) * 100).toFixed(1));
@@ -164,15 +185,15 @@ export function useMarketData() {
         {
           ...fb[1],
           value: y2Val,
-          change: tdRates.y2Change ?? fb[1].change,
-          changePct: tdRates.y2Pct ?? fb[1].changePct,
+          change: tdRates?.y2Change ?? fb[1].change,
+          changePct: tdRates?.y2Pct ?? fb[1].changePct,
         },
         { ...fb[2], value: y5Val },
         {
           ...fb[3],
           value: y10Val,
-          change: tdRates.y10Change ?? fb[3].change,
-          changePct: tdRates.y10Pct ?? fb[3].changePct,
+          change: tdRates?.y10Change ?? fb[3].change,
+          changePct: tdRates?.y10Pct ?? fb[3].changePct,
         },
         { ...fb[4], value: y20Val },
         { ...fb[5], value: y30Val },
@@ -195,7 +216,7 @@ export function useMarketData() {
           : prev.equities,
       }));
 
-      setStatus('rates', loadedStatus);
+      setStatus('rates', warnings.length ? warnedStatus(warnings) : loadedStatus);
     } catch (e) {
       setStatus('rates', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
@@ -204,11 +225,22 @@ export function useMarketData() {
   const fetchYields = useCallback(async () => {
     setStatus('yields', loadingStatus);
     try {
-      const fredCurve = await getFredYieldCurve();
-      const baseCurve = fredCurve ?? mockMarketData.yieldCurve;
-      const overlaid = await getFredYieldCurveOverlays(baseCurve).catch(() => baseCurve);
-      setData(prev => ({ ...prev, yieldCurve: overlaid }));
-      setStatus('yields', loadedStatus);
+      const curveResult = await getFredYieldCurve();
+      if (curveResult.status === 'error') {
+        setStatus('yields', errorStatus(curveResult.error));
+        return;
+      }
+      const baseCurve = curveResult.data;
+      const overlayResult = await getFredYieldCurveOverlays(baseCurve);
+      const finalCurve = overlayResult.status === 'ok' ? overlayResult.data : baseCurve;
+      const warnings = [
+        ...(curveResult.warnings || []),
+        ...(overlayResult.status === 'ok'
+          ? (overlayResult.warnings || [])
+          : [{ field: 'overlays', message: 'Historical overlay unavailable' }]),
+      ];
+      setData(prev => ({ ...prev, yieldCurve: finalCurve }));
+      setStatus('yields', warnings.length ? warnedStatus(warnings) : loadedStatus);
     } catch (e) {
       setStatus('yields', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
@@ -232,7 +264,12 @@ export function useMarketData() {
   const fetchInflation = useCallback(async (forceRefresh = false) => {
     setStatus('inflation', loadingStatus);
     try {
-      const inflation = await getLiveInflation();
+      const result = await getLiveInflation();
+      if (result.status === 'error') {
+        setStatus('inflation', errorStatus(result.error));
+        return;
+      }
+      const inflation = result.data;
       const latestDate = inflation[0]?.dataThrough ?? '';
 
       if (!forceRefresh && latestDate && latestDate === lastInflationDate.current) {
@@ -242,7 +279,7 @@ export function useMarketData() {
 
       lastInflationDate.current = latestDate;
       setData(prev => ({ ...prev, inflation }));
-      setStatus('inflation', loadedStatus);
+      setStatus('inflation', result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus('inflation', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
@@ -266,16 +303,31 @@ export function useMarketData() {
   const fetchCalendar = useCallback(async () => {
     setStatus('calendar', loadingStatus);
     try {
-      const [calendar, fomc] = await Promise.allSettled([
+      const [calResult, fomcResult] = await Promise.all([
         getFinnhubEconomicCalendar(),
         getFinnhubFedWatch(),
       ]);
+
+      const warnings: ResultWarning[] = [];
+      const calData = calResult.status === 'ok' ? calResult.data : null;
+      const fomcData = fomcResult.status === 'ok' ? fomcResult.data : null;
+
+      if (calResult.status === 'error') warnings.push({ field: 'calendar', message: calResult.error });
+      if (fomcResult.status === 'error') warnings.push({ field: 'fomc', message: fomcResult.error });
+      if (calResult.status === 'ok' && calResult.warnings?.length) warnings.push(...calResult.warnings);
+      if (fomcResult.status === 'ok' && fomcResult.warnings?.length) warnings.push(...fomcResult.warnings);
+
+      if (!calData && !fomcData) {
+        setStatus('calendar', errorStatus(warnings.map(w => w.message).join('; ')));
+        return;
+      }
+
       setData(prev => ({
         ...prev,
-        economicCalendar: calendar.status === 'fulfilled' ? calendar.value : prev.economicCalendar,
-        fomc: fomc.status === 'fulfilled' ? fomc.value : prev.fomc,
+        ...(calData && { economicCalendar: calData }),
+        ...(fomcData && { fomc: fomcData }),
       }));
-      setStatus('calendar', loadedStatus);
+      setStatus('calendar', warnings.length ? warnedStatus(warnings) : loadedStatus);
     } catch (e) {
       setStatus('calendar', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
