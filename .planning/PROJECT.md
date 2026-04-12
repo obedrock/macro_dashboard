@@ -32,7 +32,7 @@ All panels reliably display real, current market data with clear indication of d
 ### Active
 
 - ✓ Robust error handling — API failures surface clearly to users, never fail silently — Validated in Phase 02: data-layer-hardening
-- [ ] WebSocket reconnection — automatic reconnect with backoff on connection drops
+- ✓ WebSocket reconnection — automatic reconnect with backoff on connection drops — Validated in Phase 03: websocket-reliability
 - [ ] Clear data state indicators — users can tell if data is live, stale, loading, or errored
 - ✓ Rate limit handling — graceful degradation when API limits are hit — Validated in Phase 02: data-layer-hardening
 - ✓ Remove Massive/Polygon integration — simplify to 3 core data sources — Validated in Phase 01: cleanup
@@ -54,7 +54,7 @@ This is a brownfield refactor of an existing, functional dashboard. The codebase
 - 4 API service modules but Massive/Polygon is effectively unused
 - Mock data that silently substitutes for real data on any API failure
 - No test infrastructure whatsoever
-- WebSocket connections that don't reconnect on drops
+- WebSocket connections managed by wsManager with exponential backoff, terminal state, and UI status indicator
 - No rate limit awareness — services hit APIs without backoff
 
 The codebase map is at `.planning/codebase/` with detailed analysis of architecture, stack, conventions, integrations, concerns, and structure.
@@ -96,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after Phase 02 (data-layer-hardening) completion*
+*Last updated: 2026-04-11 after Phase 03 (websocket-reliability) completion*
