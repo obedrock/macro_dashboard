@@ -50,7 +50,7 @@ All panels reliably display real, current market data with clear indication of d
 ## Context
 
 This is a brownfield refactor of an existing, functional dashboard. The codebase has:
-- A monolithic `useMarketData` hook (~800 lines) that owns all data fetching
+- Domain-specific hooks (useEquities, useRates, useFX, etc.) composed via MarketDataContext with per-widget error boundaries
 - 4 API service modules but Massive/Polygon is effectively unused
 - Mock data that silently substitutes for real data on any API failure
 - No test infrastructure whatsoever
@@ -96,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after Phase 03 (websocket-reliability) completion*
+*Last updated: 2026-04-11 after Phase 04 (architecture-decomposition) completion*
