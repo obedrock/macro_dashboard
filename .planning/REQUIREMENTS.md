@@ -14,12 +14,12 @@
 
 ### Data Layer
 
-- [ ] **DATA-01**: Services return DataResult<T> wrapper with source metadata (live/fallback/error) instead of raw data
+- [x] **DATA-01**: Services return DataResult<T> wrapper with source metadata (live/fallback/error) instead of raw data
 - [ ] **DATA-02**: Per-widget error states surface clearly — no silent failures or mock substitution
-- [ ] **DATA-03**: Rate limit detection (429 response) with per-provider exponential backoff via p-queue
-- [ ] **DATA-04**: Zod schema validation on API responses — malformed data triggers error state, not NaN
+- [x] **DATA-03**: Rate limit detection (429 response) with per-provider exponential backoff via p-queue
+- [x] **DATA-04**: Zod schema validation on API responses — malformed data triggers error state, not NaN
 - [ ] **DATA-05**: Partial success handling — when one source fails in a multi-source widget, show available data with warning
-- [ ] **DATA-06**: User-friendly error messages mapped from HTTP status codes and provider error codes
+- [x] **DATA-06**: User-friendly error messages mapped from HTTP status codes and provider error codes
 
 ### WebSocket
 
@@ -87,12 +87,12 @@
 | CLEAN-02 | Phase 1 | Complete |
 | CLEAN-03 | Phase 1 | Complete |
 | CLEAN-04 | Phase 1 | Complete |
-| DATA-01 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Pending |
-| DATA-03 | Phase 2 | Pending |
-| DATA-04 | Phase 2 | Pending |
+| DATA-03 | Phase 2 | Complete |
+| DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 2 | Pending |
-| DATA-06 | Phase 2 | Pending |
+| DATA-06 | Phase 2 | Complete |
 | WS-01 | Phase 3 | Pending |
 | WS-02 | Phase 3 | Pending |
 | WS-03 | Phase 3 | Pending |

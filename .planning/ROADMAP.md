@@ -47,7 +47,7 @@ Plans:
   5. Error messages shown to the user are human-readable (e.g., "Data unavailable — rate limit reached") not raw HTTP status codes
 **Plans**: 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Foundation: DataResult types, RateLimiter, error messages, Zod schemas
+- [x] 02-01-PLAN.md — Foundation: DataResult types, RateLimiter, error messages, Zod schemas
 - [ ] 02-02-PLAN.md — Service migration: all services return DataResult with validation
 - [ ] 02-03-PLAN.md — Hook adaptation: useMarketData unwraps DataResult
 
@@ -119,7 +119,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Cleanup | 2/2 | Complete   | 2026-04-12 |
-| 2. Data Layer Hardening | 0/3 | Not started | - |
+| 2. Data Layer Hardening | 1/3 | In Progress|  |
 | 3. WebSocket Reliability | 0/TBD | Not started | - |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |
 | 5. UI Transparency | 0/TBD | Not started | - |

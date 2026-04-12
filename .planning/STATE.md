@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 2 context gathered
-last_updated: "2026-04-12T02:49:10.269Z"
+status: Ready to execute
+stopped_at: Completed 02-data-layer-hardening 02-01-PLAN.md
+last_updated: "2026-04-12T03:20:38.908Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
+Phase: 02 (data-layer-hardening) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Plan: Not started
 *Updated after each plan completion*
 | Phase 01-cleanup P02 | 98s | 2 tasks | 1 files |
 | Phase 01-cleanup P01 | 12 | 2 tasks | 6 files |
+| Phase 02-data-layer-hardening P01 | 8 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - [Phase 01-cleanup]: Brent Crude fetched as BZ:COM (not WTI+2.57 fabrication)
 - [Phase 01-cleanup]: Remove TTL.MASSIVE from cache.ts alongside massiveService.ts deletion to avoid dead constants
 - [Phase 01-cleanup]: Use Intl.DateTimeFormat formatToParts with America/New_York for DST-safe ET scheduling
+- [Phase 02-data-layer-hardening]: Use zod@4 for API validation schemas with .passthrough() to tolerate schema drift
+- [Phase 02-data-layer-hardening]: DataResult<T> discriminated union with 'partial' DataSource for mixed-quality responses
 
 ### Pending Todos
 
@@ -75,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T02:49:10.265Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-data-layer-hardening/02-CONTEXT.md
+Last session: 2026-04-12T03:20:38.904Z
+Stopped at: Completed 02-data-layer-hardening 02-01-PLAN.md
+Resume file: None
