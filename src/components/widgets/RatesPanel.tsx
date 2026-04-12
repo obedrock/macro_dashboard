@@ -9,9 +9,11 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
-export default function RatesPanel({ data, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function RatesPanel({ data, onExpand, onRetry, dragHandleProps, status, badge, headerRight }: Props) {
   return (
     <Widget
       title="Interest Rates"
@@ -20,6 +22,8 @@ export default function RatesPanel({ data, onExpand, onRetry, dragHandleProps, s
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
+      headerRight={headerRight}
       skeletonRows={7}
     >
       <div className="space-y-1.5">

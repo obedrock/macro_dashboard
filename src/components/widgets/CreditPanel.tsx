@@ -17,11 +17,13 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 const COLORS = ['#f87171', '#38bdf8', '#fb923c'];
 
-export default function CreditPanel({ data, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function CreditPanel({ data, onExpand, onRetry, dragHandleProps, status, badge, headerRight }: Props) {
   return (
     <Widget
       title="Credit Spreads"
@@ -30,6 +32,8 @@ export default function CreditPanel({ data, onExpand, onRetry, dragHandleProps, 
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
+      headerRight={headerRight}
       skeletonRows={3}
     >
       <div className="space-y-3">

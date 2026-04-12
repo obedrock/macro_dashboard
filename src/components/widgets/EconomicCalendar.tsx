@@ -9,6 +9,8 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 function getCountdown(dateStr: string, timeStr: string): string {
@@ -62,7 +64,7 @@ const IMPORTANCE_COLORS = {
   low: 'bg-slate-600',
 };
 
-export default function EconomicCalendar({ events, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function EconomicCalendar({ events, onExpand, onRetry, dragHandleProps, status, badge, headerRight }: Props) {
   const [, setTick] = useState(0);
   const [showAll, setShowAll] = useState(false);
 
@@ -82,6 +84,8 @@ export default function EconomicCalendar({ events, onExpand, onRetry, dragHandle
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
+      headerRight={headerRight}
       skeletonRows={8}
     >
       {nextHighEvent && (

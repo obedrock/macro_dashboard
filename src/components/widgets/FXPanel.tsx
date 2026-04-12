@@ -9,6 +9,8 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 function getDecimals(label: string, value: number): number {
@@ -18,7 +20,7 @@ function getDecimals(label: string, value: number): number {
   return 4;
 }
 
-export default function FXPanel({ data, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function FXPanel({ data, onExpand, onRetry, dragHandleProps, status, badge, headerRight }: Props) {
   return (
     <Widget
       title="FX Markets"
@@ -27,6 +29,8 @@ export default function FXPanel({ data, onExpand, onRetry, dragHandleProps, stat
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
+      headerRight={headerRight}
       skeletonRows={5}
     >
       <div className="space-y-1.5">

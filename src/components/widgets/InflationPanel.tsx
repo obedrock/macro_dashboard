@@ -18,6 +18,8 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 const FED_TARGET = 2.0;
@@ -32,7 +34,7 @@ function MomBadge({ mom }: { mom: number }) {
   );
 }
 
-export default function InflationPanel({ data, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function InflationPanel({ data, onExpand, onRetry, dragHandleProps, status, badge, headerRight }: Props) {
   const [cpi, coreCpi, pce, corePce] = data.slice(0, 4);
   const expectations = data.slice(4);
 
@@ -44,6 +46,8 @@ export default function InflationPanel({ data, onExpand, onRetry, dragHandleProp
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
+      headerRight={headerRight}
       skeletonRows={6}
     >
       <div className="space-y-3">

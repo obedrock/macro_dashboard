@@ -9,6 +9,8 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 const SENTIMENT_CONFIG = {
@@ -17,7 +19,7 @@ const SENTIMENT_CONFIG = {
   neutral: { dot: 'bg-slate-500', text: 'text-slate-500' },
 };
 
-export default function NewsWidget({ news, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function NewsWidget({ news, onExpand, onRetry, dragHandleProps, status, badge, headerRight }: Props) {
   return (
     <Widget
       title="Macro News"
@@ -26,6 +28,8 @@ export default function NewsWidget({ news, onExpand, onRetry, dragHandleProps, s
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
+      headerRight={headerRight}
       skeletonRows={8}
     >
       <div className="space-y-0 divide-y divide-slate-800/70">

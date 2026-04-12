@@ -10,6 +10,8 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 function getDaysUntil(dateStr: string): number {
@@ -45,6 +47,8 @@ export default function FedWatchWidget({
   onRetry,
   dragHandleProps,
   status,
+  badge,
+  headerRight,
 }: Props) {
   const [activeIdx, setActiveIdx] = useState(0);
   const meeting = meetings[activeIdx];
@@ -59,6 +63,8 @@ export default function FedWatchWidget({
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
+      headerRight={headerRight}
       skeletonRows={4}
     >
       <div className="mb-4 p-3 bg-slate-800/60 rounded-lg flex items-center justify-between">
