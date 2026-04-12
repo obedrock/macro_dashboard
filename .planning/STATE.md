@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 3 context updated
-last_updated: "2026-04-12T03:57:20.555Z"
+status: Ready to execute
+stopped_at: Completed 03-websocket-reliability-01-PLAN.md
+last_updated: "2026-04-12T04:33:19.127Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** All panels reliably display real, current market data with clear indication of data freshness and error states — no silent failures, no ambiguous mock data
-**Current focus:** Phase 02 — data-layer-hardening
+**Current focus:** Phase 03 — websocket-reliability
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
+Phase: 03 (websocket-reliability) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Plan: Not started
 | Phase 02-data-layer-hardening P01 | 8 | 2 tasks | 6 files |
 | Phase 02-data-layer-hardening P02 | 643 | 2 tasks | 3 files |
 | Phase 02-data-layer-hardening P03 | 8 | 2 tasks | 2 files |
+| Phase 03-websocket-reliability P01 | 720 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 02-data-layer-hardening]: Infrastructure safety-net catch blocks retained in useMarketData callbacks — they catch unexpected non-DataResult errors, not service errors
 - [Phase 02-data-layer-hardening]: warnedStatus stores warning text in WidgetStatus.error with state loaded — Phase 5 (UI-02) adds amber badge treatment
 - [Phase 02-data-layer-hardening]: fetchCalendar switched from Promise.allSettled to Promise.all since services return DataResult not throw
+- [Phase 03-websocket-reliability]: Initial WsStatus is 'connecting' not 'disconnected' — subscribe() calls connect() implicitly so consumers always see 'connecting' with in-flight attempt
+- [Phase 03-websocket-reliability]: onerror only calls ws.close() — reconnect lives entirely in onclose to prevent double-reconnect
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T03:57:20.552Z
-Stopped at: Phase 3 context updated
-Resume file: .planning/phases/03-websocket-reliability/03-CONTEXT.md
+Last session: 2026-04-12T04:33:19.123Z
+Stopped at: Completed 03-websocket-reliability-01-PLAN.md
+Resume file: None

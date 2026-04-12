@@ -23,10 +23,10 @@
 
 ### WebSocket
 
-- [ ] **WS-01**: Exponential backoff reconnection with jitter (replace flat 5s loop)
-- [ ] **WS-02**: Max retry cap (10 attempts) with "gave up" terminal state
-- [ ] **WS-03**: Connection state exposed as wsStatus (connected/connecting/reconnecting/failed)
-- [ ] **WS-04**: WebSocketManager encapsulates lastPrices/prevPrices (no exported mutable globals)
+- [x] **WS-01**: Exponential backoff reconnection with jitter (replace flat 5s loop)
+- [x] **WS-02**: Max retry cap (10 attempts) with "gave up" terminal state
+- [x] **WS-03**: Connection state exposed as wsStatus (connected/connecting/reconnecting/failed)
+- [x] **WS-04**: WebSocketManager encapsulates lastPrices/prevPrices (no exported mutable globals)
 
 ### Architecture
 
@@ -93,10 +93,10 @@
 | DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 2 | Complete |
 | DATA-06 | Phase 2 | Complete |
-| WS-01 | Phase 3 | Pending |
-| WS-02 | Phase 3 | Pending |
-| WS-03 | Phase 3 | Pending |
-| WS-04 | Phase 3 | Pending |
+| WS-01 | Phase 3 | Complete |
+| WS-02 | Phase 3 | Complete |
+| WS-03 | Phase 3 | Complete |
+| WS-04 | Phase 3 | Complete |
 | ARCH-01 | Phase 4 | Pending |
 | ARCH-02 | Phase 4 | Pending |
 | ARCH-03 | Phase 4 | Pending |

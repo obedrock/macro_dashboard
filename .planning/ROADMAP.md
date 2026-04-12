@@ -62,7 +62,7 @@ Plans:
   4. No mutable global variables for lastPrices or prevPrices are exported — price state is encapsulated inside WebSocketManager
 **Plans**: 2 plans
 Plans:
-- [ ] 03-01-PLAN.md — Create WebSocketManager class with backoff, retry cap, heartbeat, and WsStatus type
+- [x] 03-01-PLAN.md — Create WebSocketManager class with backoff, retry cap, heartbeat, and WsStatus type
 - [ ] 03-02-PLAN.md — Migrate twelveDataService.ts and useMarketData.ts to use wsManager
 
 ### Phase 4: Architecture Decomposition
@@ -120,7 +120,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Cleanup | 2/2 | Complete   | 2026-04-12 |
 | 2. Data Layer Hardening | 3/3 | Complete   | 2026-04-12 |
-| 3. WebSocket Reliability | 0/2 | Not started | - |
+| 3. WebSocket Reliability | 1/2 | In Progress|  |
 | 4. Architecture Decomposition | 0/TBD | Not started | - |
 | 5. UI Transparency | 0/TBD | Not started | - |
 | 6. Test Infrastructure | 0/TBD | Not started | - |
