@@ -77,8 +77,8 @@ Plans:
   4. Polling intervals do not re-register on every render — useEffect dependency arrays are stable and intervals fire at their intended cadence
 **Plans**: 2 plans
 Plans:
-- [ ] 04-01-PLAN.md — [to be planned]
-- [ ] 04-02-PLAN.md — [to be planned]
+- [ ] 04-01-PLAN.md — Extract domain hooks (statusUtils + 8 domain-specific hooks with polling)
+- [ ] 04-02-PLAN.md — Wire MarketDataContext, replace monolith, add WidgetErrorBoundary
 **UI hint**: yes
 
 ### Phase 5: UI Transparency
@@ -122,6 +122,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Cleanup | 2/2 | Complete   | 2026-04-12 |
 | 2. Data Layer Hardening | 3/3 | Complete   | 2026-04-12 |
 | 3. WebSocket Reliability | 2/3 | Gap closure | 2026-04-12 |
-| 4. Architecture Decomposition | 0/TBD | Not started | - |
+| 4. Architecture Decomposition | 0/2 | Planned | - |
 | 5. UI Transparency | 0/TBD | Not started | - |
 | 6. Test Infrastructure | 0/TBD | Not started | - |
