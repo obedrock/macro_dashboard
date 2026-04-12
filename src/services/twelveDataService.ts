@@ -186,19 +186,18 @@ export async function getTwelveEquities(): Promise<PriceItem[]> {
 }
 
 export async function getTwelveFX(): Promise<PriceItem[]> {
-  const symbols = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CNY'];
+  const symbols = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CNY', 'DX-Y.NYB'];
   const batch = await fetchBatchQuotes(symbols);
   const fb = mockMarketData.fx;
 
+  const dxyQ = isTdQuote(batch['DX-Y.NYB']) ? batch['DX-Y.NYB'] : null;
   const eurusd = isTdQuote(batch['EUR/USD']) ? batch['EUR/USD'] : null;
   const usdjpy = isTdQuote(batch['USD/JPY']) ? batch['USD/JPY'] : null;
   const gbpusd = isTdQuote(batch['GBP/USD']) ? batch['GBP/USD'] : null;
   const usdcny = isTdQuote(batch['USD/CNY']) ? batch['USD/CNY'] : null;
 
-  const dxyFallback = fb[0];
-
   return [
-    dxyFallback,
+    dxyQ ? toItem(dxyQ, fb[0], 'DXY') : fb[0],
     eurusd ? toItem(eurusd, fb[1], 'EUR/USD') : fb[1],
     usdjpy ? toItem(usdjpy, fb[2], 'USD/JPY') : fb[2],
     gbpusd ? toItem(gbpusd, fb[3], 'GBP/USD') : fb[3],
@@ -207,36 +206,23 @@ export async function getTwelveFX(): Promise<PriceItem[]> {
 }
 
 export async function getTwelveCommodities(): Promise<PriceItem[]> {
-  const [wti, gold, silver, copper, natgas] = await Promise.allSettled([
-    fetchSingleQuote('CL1:COM'),
-    fetchSingleQuote('XAU/USD'),
-    fetchSingleQuote('XAG/USD'),
-    fetchSingleQuote('HG1:COM'),
-    fetchSingleQuote('GAS/USD'),
-  ]);
-
+  const symbols = ['CL1:COM', 'BZ:COM', 'XAU/USD', 'XAG/USD', 'HG1:COM', 'GAS/USD'];
+  const batch = await fetchBatchQuotes(symbols);
   const fb = mockMarketData.commodities;
 
-  const wtiQ = wti.status === 'fulfilled' ? wti.value : null;
-  const goldQ = gold.status === 'fulfilled' ? gold.value : null;
-  const silverQ = silver.status === 'fulfilled' ? silver.value : null;
-  const copperQ = copper.status === 'fulfilled' ? copper.value : null;
-  const natgasQ = natgas.status === 'fulfilled' ? natgas.value : null;
+  const wtiQ = isTdQuote(batch['CL1:COM']) ? batch['CL1:COM'] : null;
+  const brentQ = isTdQuote(batch['BZ:COM']) ? batch['BZ:COM'] : null;
+  const goldQ = isTdQuote(batch['XAU/USD']) ? batch['XAU/USD'] : null;
+  const silverQ = isTdQuote(batch['XAG/USD']) ? batch['XAG/USD'] : null;
+  const copperQ = isTdQuote(batch['HG1:COM']) ? batch['HG1:COM'] : null;
+  const natgasQ = isTdQuote(batch['GAS/USD']) ? batch['GAS/USD'] : null;
 
   const wtiItem = wtiQ ? { ...toItem(wtiQ, fb[0], 'WTI Crude'), prefix: '$' } : fb[0];
+  const brentItem = brentQ ? { ...toItem(brentQ, fb[1], 'Brent Crude'), prefix: '$' } : fb[1];
+  const natgasItem = natgasQ ? { ...toItem(natgasQ, fb[2], 'Natural Gas'), prefix: '$' } : fb[2];
   const goldItem = goldQ ? { ...toItem(goldQ, fb[3], 'Gold'), prefix: '$' } : fb[3];
   const silverItem = silverQ ? { ...toItem(silverQ, fb[4], 'Silver'), prefix: '$' } : fb[4];
   const copperItem = copperQ ? { ...toItem(copperQ, fb[5], 'Copper'), prefix: '$' } : fb[5];
-  const natgasItem = natgasQ ? { ...toItem(natgasQ, fb[2], 'Natural Gas'), prefix: '$' } : fb[2];
-
-  const brentItem = wtiQ
-    ? {
-        ...fb[1],
-        value: parseFloat((parseFloat(wtiQ.close) + 2.57).toFixed(2)),
-        change: parseFloat(wtiQ.change),
-        changePct: parseFloat(wtiQ.percent_change),
-      }
-    : fb[1];
 
   return [wtiItem, brentItem, natgasItem, goldItem, silverItem, copperItem];
 }
