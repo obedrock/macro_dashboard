@@ -30,10 +30,10 @@
 
 ### Architecture
 
-- [ ] **ARCH-01**: Decompose useMarketData into domain-specific hooks (one per data group)
-- [ ] **ARCH-02**: MarketDataContext composes domain hooks — zero widget API changes required
-- [ ] **ARCH-03**: Error boundaries around each widget — render panics don't crash dashboard
-- [ ] **ARCH-04**: useEffect dependency arrays stabilized to prevent interval re-registration
+- [x] **ARCH-01**: Decompose useMarketData into domain-specific hooks (one per data group)
+- [x] **ARCH-02**: MarketDataContext composes domain hooks — zero widget API changes required
+- [x] **ARCH-03**: Error boundaries around each widget — render panics don't crash dashboard
+- [x] **ARCH-04**: useEffect dependency arrays stabilized to prevent interval re-registration
 
 ### UI Transparency
 
@@ -97,10 +97,10 @@
 | WS-02 | Phase 3 | Complete |
 | WS-03 | Phase 3 | Complete |
 | WS-04 | Phase 3 | Complete |
-| ARCH-01 | Phase 4 | Pending |
-| ARCH-02 | Phase 4 | Pending |
-| ARCH-03 | Phase 4 | Pending |
-| ARCH-04 | Phase 4 | Pending |
+| ARCH-01 | Phase 4 | Complete |
+| ARCH-02 | Phase 4 | Complete |
+| ARCH-03 | Phase 4 | Complete |
+| ARCH-04 | Phase 4 | Complete |
 | UI-01 | Phase 5 | Pending |
 | UI-02 | Phase 5 | Pending |
 | UI-03 | Phase 5 | Pending |
