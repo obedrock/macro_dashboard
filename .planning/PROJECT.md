@@ -33,7 +33,7 @@ All panels reliably display real, current market data with clear indication of d
 
 - ✓ Robust error handling — API failures surface clearly to users, never fail silently — Validated in Phase 02: data-layer-hardening
 - ✓ WebSocket reconnection — automatic reconnect with backoff on connection drops — Validated in Phase 03: websocket-reliability
-- [ ] Clear data state indicators — users can tell if data is live, stale, loading, or errored
+- ✓ Clear data state indicators — users can tell if data is live, stale, loading, or errored — Validated in Phase 05: ui-transparency
 - ✓ Rate limit handling — graceful degradation when API limits are hit — Validated in Phase 02: data-layer-hardening
 - ✓ Remove Massive/Polygon integration — simplify to 3 core data sources — Validated in Phase 01: cleanup
 - [ ] Test infrastructure — add test framework and tests for critical data services
