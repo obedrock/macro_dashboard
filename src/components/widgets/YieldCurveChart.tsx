@@ -28,6 +28,25 @@ type Overlay = 'none' | '1m' | '1y';
 export default function YieldCurveChart({ data, onExpand, onRetry, dragHandleProps, status, badge, freshnessNode }: Props) {
   const [overlay, setOverlay] = useState<Overlay>('1m');
 
+  // Compute Y-axis domain from actual data with tight padding
+  const allValues = data.flatMap(d => [d.current, d.oneMonthAgo, d.oneYearAgo]).filter(v => v > 0);
+  const minY = allValues.length > 0 ? Math.floor(Math.min(...allValues) * 4) / 4 : 3;
+  const maxY = allValues.length > 0 ? Math.ceil(Math.max(...allValues) * 4) / 4 + 0.25 : 5;
+
+  // Compute spreads from actual data
+  const getRate = (maturity: string) => data.find(d => d.maturity === maturity)?.current ?? 0;
+  const y2 = getRate('2Y');
+  const y3m = getRate('3M');
+  const y10 = getRate('10Y');
+  const y30 = getRate('30Y');
+  const spread2s10s = y2 && y10 ? ((y10 - y2) * 100).toFixed(1) : null;
+  const spread2s30s = y2 && y30 ? ((y30 - y2) * 100).toFixed(1) : null;
+  const spread3m10y = y3m && y10 ? ((y10 - y3m) * 100).toFixed(1) : null;
+
+  // Fed funds rate approximation from 1M yield (upper target ≈ ceil to nearest 0.25)
+  const y1m = getRate('1M');
+  const fedFundsApprox = y1m > 0 ? Math.ceil((y1m + 0.08) * 4) / 4 : null;
+
   return (
     <Widget
       title="Yield Curve"
@@ -70,7 +89,7 @@ export default function YieldCurveChart({ data, onExpand, onRetry, dragHandlePro
               tickLine={false}
             />
             <YAxis
-              domain={['auto', 'auto']}
+              domain={[minY, maxY]}
               tick={{ fontSize: 10, fill: '#64748b' }}
               axisLine={false}
               tickLine={false}
@@ -86,13 +105,15 @@ export default function YieldCurveChart({ data, onExpand, onRetry, dragHandlePro
               }}
               formatter={(val: unknown, name: unknown) => [`${(val as number).toFixed(3)}%`, name as string]}
             />
-            <ReferenceLine
-              y={4.375}
-              stroke="#f59e0b"
-              strokeDasharray="4 4"
-              strokeWidth={1}
-              label={{ value: 'Fed Funds', fill: '#f59e0b', fontSize: 9, position: 'insideRight' }}
-            />
+            {fedFundsApprox !== null && (
+              <ReferenceLine
+                y={fedFundsApprox}
+                stroke="#f59e0b"
+                strokeDasharray="4 4"
+                strokeWidth={1}
+                label={{ value: `Fed Funds ${fedFundsApprox.toFixed(2)}%`, fill: '#f59e0b', fontSize: 9, position: 'insideRight' }}
+              />
+            )}
             <Line
               type="monotone"
               dataKey="current"
@@ -135,18 +156,30 @@ export default function YieldCurveChart({ data, onExpand, onRetry, dragHandlePro
         </ResponsiveContainer>
       </div>
       <div className="mt-3 flex items-center gap-4 px-1">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-500">2s10s:</span>
-          <span className="text-xs font-mono text-emerald-400">+30.5 bps</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-500">2s30s:</span>
-          <span className="text-xs font-mono text-emerald-400">+49.6 bps</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-500">3m10y:</span>
-          <span className="text-xs font-mono text-red-400">-72.7 bps</span>
-        </div>
+        {spread2s10s !== null && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-500">2s10s:</span>
+            <span className={`text-xs font-mono ${parseFloat(spread2s10s) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {parseFloat(spread2s10s) >= 0 ? '+' : ''}{spread2s10s} bps
+            </span>
+          </div>
+        )}
+        {spread2s30s !== null && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-500">2s30s:</span>
+            <span className={`text-xs font-mono ${parseFloat(spread2s30s) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {parseFloat(spread2s30s) >= 0 ? '+' : ''}{spread2s30s} bps
+            </span>
+          </div>
+        )}
+        {spread3m10y !== null && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-500">3m10y:</span>
+            <span className={`text-xs font-mono ${parseFloat(spread3m10y) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {parseFloat(spread3m10y) >= 0 ? '+' : ''}{spread3m10y} bps
+            </span>
+          </div>
+        )}
       </div>
     </Widget>
   );
