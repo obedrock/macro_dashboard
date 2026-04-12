@@ -9,9 +9,11 @@ interface Props {
   ribbonStatus: WidgetStatus;
   onRefresh: () => void;
   wsStatus: WsStatus;
+  onWsReconnect?: () => void;
+  wsAttempt?: number;
 }
 
-export default function SummaryRibbon({ items, lastUpdated, loading, ribbonStatus, onRefresh, wsStatus }: Props) {
+export default function SummaryRibbon({ items, lastUpdated, loading, ribbonStatus, onRefresh, wsStatus, onWsReconnect, wsAttempt = 0 }: Props) {
   const formatTime = (d: Date) =>
     d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -65,18 +67,31 @@ export default function SummaryRibbon({ items, lastUpdated, loading, ribbonStatu
 
       <div className="flex-shrink-0 flex items-center gap-2 px-4 border-l border-slate-800 bg-slate-950">
         <div className="hidden sm:flex items-center gap-1.5 mr-2 pr-2 border-r border-slate-800">
-          <span className={`inline-flex rounded-full h-2 w-2 ${
-            wsStatus === 'connected' ? 'bg-emerald-500' :
-            wsStatus === 'connecting' ? 'bg-amber-400 animate-pulse' :
-            wsStatus === 'reconnecting' ? 'bg-amber-400 animate-pulse' :
-            'bg-red-500'
-          }`} />
-          <span className="text-xs text-slate-500">
-            {wsStatus === 'connected' ? 'WS' :
-             wsStatus === 'connecting' ? 'WS...' :
-             wsStatus === 'reconnecting' ? 'WS...' :
-             'WS off'}
-          </span>
+          {wsStatus === 'failed' && onWsReconnect ? (
+            <button
+              onClick={onWsReconnect}
+              className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+              title="Click to reconnect"
+            >
+              <span className="inline-flex rounded-full h-2 w-2 bg-red-500" />
+              <span className="text-xs text-red-400 hover:text-red-300">WS off</span>
+            </button>
+          ) : (
+            <>
+              <span className={`inline-flex rounded-full h-2 w-2 ${
+                wsStatus === 'connected' ? 'bg-emerald-500' :
+                wsStatus === 'connecting' ? 'bg-amber-400 animate-pulse' :
+                wsStatus === 'reconnecting' ? 'bg-amber-400 animate-pulse' :
+                'bg-red-500'
+              }`} />
+              <span className="text-xs text-slate-500">
+                {wsStatus === 'connected' ? 'WS' :
+                 wsStatus === 'connecting' ? 'WS...' :
+                 wsStatus === 'reconnecting' ? `WS... ${wsAttempt}/10` :
+                 'WS off'}
+              </span>
+            </>
+          )}
         </div>
         <div className="hidden sm:flex items-center gap-1.5">
           {isLive ? (

@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { WidgetConfig, WidgetId, WidgetStatuses } from '../../types';
+import { WidgetConfig, WidgetId, WidgetStatuses, WidgetTimestamps, WidgetSources } from '../../types';
 import { useDashboard } from '../../context/DashboardContext';
 import { MarketData, EconomicEvent, NewsItem } from '../../types';
 import WidgetErrorBoundary from '../shared/WidgetErrorBoundary';
+import FreshnessLabel from '../shared/FreshnessLabel';
+import DataSourceBadge from '../shared/DataSourceBadge';
 
 import RatesPanel from '../widgets/RatesPanel';
 import EquitiesPanel from '../widgets/EquitiesPanel';
@@ -20,11 +22,14 @@ interface Props {
   events: EconomicEvent[];
   news: NewsItem[];
   statuses: WidgetStatuses;
+  widgetTimestamps: WidgetTimestamps;
+  widgetSources: WidgetSources;
+  now: number;
   onExpandWidget: (id: WidgetId) => void;
   onRetry: (key: keyof WidgetStatuses) => void;
 }
 
-export default function DashboardGrid({ data, events, news, statuses, onExpandWidget, onRetry }: Props) {
+export default function DashboardGrid({ data, events, news, statuses, widgetTimestamps, widgetSources, now, onExpandWidget, onRetry }: Props) {
   const { visibleWidgets, reorderWidgets } = useDashboard();
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropIdx, setDropIdx] = useState<number | null>(null);
@@ -74,6 +79,10 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
       ${widget.size === 'large' ? 'col-span-1 lg:col-span-2' : 'col-span-1'}
     `;
 
+    const widgetKey = widget.id as keyof WidgetTimestamps;
+    const freshnessLabel = <FreshnessLabel lastFetched={widgetTimestamps[widgetKey]} now={now} />;
+    const sourceBadge = <DataSourceBadge source={widgetSources[widgetKey]} />;
+
     switch (widget.id) {
       case 'yields':
         return (
@@ -83,6 +92,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 data={data.yieldCurve}
                 status={statuses.yields}
                 onRetry={() => onRetry('yields')}
+                badge={sourceBadge}
+                freshnessNode={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -96,6 +107,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 data={data.rates}
                 status={statuses.rates}
                 onRetry={() => onRetry('rates')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -109,6 +122,9 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 data={data.equities}
                 status={statuses.equities}
                 onRetry={() => onRetry('equities')}
+                badge={sourceBadge}
+                freshnessNode={freshnessLabel}
+                now={now}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -122,6 +138,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 data={data.fx}
                 status={statuses.fx}
                 onRetry={() => onRetry('fx')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -135,6 +153,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 data={data.commodities}
                 status={statuses.commodities}
                 onRetry={() => onRetry('commodities')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -148,6 +168,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 data={data.credit}
                 status={statuses.credit}
                 onRetry={() => onRetry('credit')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -161,6 +183,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 data={data.inflation}
                 status={statuses.inflation}
                 onRetry={() => onRetry('inflation')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -174,6 +198,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 events={events}
                 status={statuses.calendar}
                 onRetry={() => onRetry('calendar')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -189,6 +215,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 meetings={data.fomc.meetings}
                 status={statuses.calendar}
                 onRetry={() => onRetry('calendar')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>
@@ -202,6 +230,8 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
                 news={news}
                 status={statuses.news}
                 onRetry={() => onRetry('news')}
+                badge={sourceBadge}
+                headerRight={freshnessLabel}
                 {...baseProps}
               />
             </WidgetErrorBoundary>

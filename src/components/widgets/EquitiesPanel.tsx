@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Widget from '../shared/Widget';
 import ChangeIndicator from '../shared/ChangeIndicator';
 import { PriceItem, WidgetStatus } from '../../types';
+import { isMarketOpen } from '../../utils/marketHours';
 
 type Period = 'D' | 'W' | 'M';
 
@@ -13,9 +14,12 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  freshnessNode?: React.ReactNode;
+  now?: number;
 }
 
-export default function EquitiesPanel({ data, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function EquitiesPanel({ data, onExpand, onRetry, dragHandleProps, status, badge, freshnessNode }: Props) {
   const [period, setPeriod] = useState<Period>('D');
 
   const adjustedData = data.map(item => ({
@@ -27,27 +31,31 @@ export default function EquitiesPanel({ data, onExpand, onRetry, dragHandleProps
   return (
     <Widget
       title="Equities"
-      subtitle="US Markets"
+      subtitle={isMarketOpen() ? 'US Markets' : 'Market closed'}
       onExpand={onExpand}
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
       skeletonRows={5}
       headerRight={
-        <div className="flex gap-1">
-          {(['D', 'W', 'M'] as Period[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`text-xs px-2 py-0.5 rounded font-mono transition-all ${
-                period === p
-                  ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              1{p}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          {freshnessNode}
+          <div className="flex gap-1">
+            {(['D', 'W', 'M'] as Period[]).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`text-xs px-2 py-0.5 rounded font-mono transition-all ${
+                  period === p
+                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                1{p}
+              </button>
+            ))}
+          </div>
         </div>
       }
     >

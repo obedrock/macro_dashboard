@@ -19,11 +19,13 @@ interface Props {
   onRetry?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   status?: WidgetStatus;
+  badge?: React.ReactNode;
+  freshnessNode?: React.ReactNode;
 }
 
 type Overlay = 'none' | '1m' | '1y';
 
-export default function YieldCurveChart({ data, onExpand, onRetry, dragHandleProps, status }: Props) {
+export default function YieldCurveChart({ data, onExpand, onRetry, dragHandleProps, status, badge, freshnessNode }: Props) {
   const [overlay, setOverlay] = useState<Overlay>('1m');
 
   return (
@@ -34,22 +36,26 @@ export default function YieldCurveChart({ data, onExpand, onRetry, dragHandlePro
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
       status={status}
+      badge={badge}
       skeletonRows={4}
       headerRight={
-        <div className="flex gap-1">
-          {(['none', '1m', '1y'] as Overlay[]).map(o => (
-            <button
-              key={o}
-              onClick={() => setOverlay(o)}
-              className={`text-xs px-2 py-0.5 rounded font-mono transition-all ${
-                overlay === o
-                  ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {o === 'none' ? 'Today' : o === '1m' ? '+1M ago' : '+1Y ago'}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          {freshnessNode}
+          <div className="flex gap-1">
+            {(['none', '1m', '1y'] as Overlay[]).map(o => (
+              <button
+                key={o}
+                onClick={() => setOverlay(o)}
+                className={`text-xs px-2 py-0.5 rounded font-mono transition-all ${
+                  overlay === o
+                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {o === 'none' ? 'Today' : o === '1m' ? '+1M ago' : '+1Y ago'}
+              </button>
+            ))}
+          </div>
         </div>
       }
     >

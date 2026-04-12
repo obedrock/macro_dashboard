@@ -4,6 +4,7 @@ import { DashboardProvider } from './context/DashboardContext';
 import { MarketDataProvider } from './context/MarketDataContext';
 import { useMarketData } from './hooks/useMarketData';
 import { WidgetId, WidgetStatuses } from './types';
+import { wsManager } from './services/wsManager';
 
 import Header from './components/layout/Header';
 import SummaryRibbon from './components/layout/SummaryRibbon';
@@ -13,7 +14,7 @@ import BottomNav from './components/layout/BottomNav';
 import ExpandedModal from './components/layout/ExpandedModal';
 
 function DashboardApp() {
-  const { data, statuses, loading, lastUpdated, refresh, retryWidget, wsStatus } = useMarketData();
+  const { data, statuses, loading, lastUpdated, refresh, retryWidget, wsStatus, widgetTimestamps, widgetSources, now } = useMarketData();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedWidget, setExpandedWidget] = useState<WidgetId | null>(null);
   const { isDark } = useTheme();
@@ -28,6 +29,8 @@ function DashboardApp() {
         ribbonStatus={statuses.ribbon}
         onRefresh={refresh}
         wsStatus={wsStatus}
+        onWsReconnect={() => wsManager.reconnect()}
+        wsAttempt={wsManager.getAttempt()}
       />
 
       <main className="max-w-screen-2xl mx-auto px-3 sm:px-4 xl:px-6 py-5 pb-20 md:pb-6">
@@ -36,6 +39,9 @@ function DashboardApp() {
           events={data.economicCalendar}
           news={data.news}
           statuses={statuses}
+          widgetTimestamps={widgetTimestamps}
+          widgetSources={widgetSources}
+          now={now}
           onExpandWidget={(id) => setExpandedWidget(id)}
           onRetry={(key) => retryWidget(key as keyof WidgetStatuses)}
         />
