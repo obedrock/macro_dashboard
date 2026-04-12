@@ -149,42 +149,8 @@ export async function getBlsInflation(): Promise<DataResult<BlsInflationItem[]>>
     },
   ];
 
-  // PCE data is not available from BLS (it's BEA) — we'll add placeholder entries
-  // so the inflation panel structure stays the same
-  items.push(
-    {
-      label: 'PCE',
-      sublabel: 'YoY % chg · All Items',
-      value: 0,
-      mom: null,
-      series: [],
-      dataThrough: 'N/A (BEA source)',
-    },
-    {
-      label: 'Core PCE',
-      sublabel: 'YoY % chg · Ex Food & Energy',
-      value: 0,
-      mom: null,
-      series: [],
-      dataThrough: 'N/A (BEA source)',
-    },
-    {
-      label: '5yr Breakeven',
-      sublabel: '% · Market Inflation Expectation',
-      value: 0,
-      mom: null,
-      series: [],
-      dataThrough: 'N/A',
-    },
-    {
-      label: '1yr Expectation',
-      sublabel: '% · Cleveland Fed Model',
-      value: 0,
-      mom: null,
-      series: [],
-      dataThrough: 'N/A',
-    },
-  );
+  // PCE data not available from BLS (BEA source) — omit rather than show zeros
+  // Breakeven data not available without FRED — omit rather than show zeros
 
   const source = warnings.length > 0 ? 'partial' : 'live';
   return { status: 'ok', data: items, source, timestamp: Date.now(), warnings: warnings.length > 0 ? warnings : undefined };

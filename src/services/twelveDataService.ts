@@ -123,7 +123,7 @@ function wsToItem(sym: string, fallback: PriceItem, label: string, valueMultipli
 
 export async function getTwelveEquities(): Promise<DataResult<PriceItem[]>> {
   try {
-    const symbols = ['SPY', 'QQQ', 'DIA', 'IWM', 'VIX'];
+    const symbols = ['SPY', 'QQQ', 'DIA', 'IWM', 'VIXY'];
     const batch = await fetchBatchQuotes(symbols);
     const fb = mockMarketData.equities;
 
@@ -131,21 +131,21 @@ export async function getTwelveEquities(): Promise<DataResult<PriceItem[]>> {
     const qqqQ = getQuote(batch, 'QQQ');
     const diaQ = getQuote(batch, 'DIA');
     const iwmQ = getQuote(batch, 'IWM');
-    const vixQ = getQuote(batch, 'VIX');
+    const vixyQ = getQuote(batch, 'VIXY');
 
-    const vixItem: PriceItem = vixQ ? {
-      label: 'VIX',
-      value: parseFloat(parseFloat(vixQ.close).toFixed(2)),
-      change: parseFloat(parseFloat(vixQ.change).toFixed(2)),
-      changePct: parseFloat(parseFloat(vixQ.percent_change).toFixed(2)),
-    } : fb[4];
-
+    // ETF prices shown directly — percent_change is accurate from Twelve Data
+    // Absolute values are ETF prices, not index values (indices require paid tier)
     const data: PriceItem[] = [
-      etfScaled(spyQ, fb[0], 'S&P 500', 10),
-      etfScaled(qqqQ, fb[1], 'Nasdaq', 28),
-      etfScaled(diaQ, fb[2], 'Dow Jones', 100),
-      etfScaled(iwmQ, fb[3], 'Russell 2000', 10),
-      vixItem,
+      etfScaled(spyQ, fb[0], 'S&P 500 (SPY)', 1),
+      etfScaled(qqqQ, fb[1], 'Nasdaq 100 (QQQ)', 1),
+      etfScaled(diaQ, fb[2], 'Dow Jones (DIA)', 1),
+      etfScaled(iwmQ, fb[3], 'Russell 2000 (IWM)', 1),
+      vixyQ ? {
+        label: 'VIX (VIXY)',
+        value: parseFloat(parseFloat(vixyQ.close).toFixed(2)),
+        change: parseFloat(parseFloat(vixyQ.change).toFixed(2)),
+        changePct: parseFloat(parseFloat(vixyQ.percent_change).toFixed(2)),
+      } : fb[4],
     ];
 
     return { status: 'ok', data, source: 'live', timestamp: Date.now() };

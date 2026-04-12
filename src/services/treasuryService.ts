@@ -184,11 +184,25 @@ export async function getTreasuryYieldCurveOverlays(currentCurve: YieldCurveData
 // Fed funds rate - changes rarely, use Treasury data as proxy
 // The upper bound of the fed funds target range
 export async function getTreasuryFedFundsRate(): Promise<DataResult<number | null>> {
-  // Fed funds rate doesn't come from Treasury CSVs.
-  // Use a hardcoded current value that we update manually, or return null to let the hook use fallback.
-  // Current fed funds target range: 4.25-4.50% (as of April 2026)
-  // The display shows lower bound (value - 0.125 from the upper target)
-  return { status: 'ok', data: 4.50, source: 'live', timestamp: Date.now() };
+  // Fed funds rate derived from 1-month T-bill yield + spread.
+  // T-bill yields sit just below the fed funds target range.
+  // Use the 1M yield from Treasury CSV + ~0.08% spread as approximation.
+  try {
+    const year = new Date().getFullYear();
+    const rows = await fetchTreasuryCSV(year);
+    const latest = getLatestRow(rows);
+    if (latest) {
+      const oneMonth = getValueFromRow(latest, '1M');
+      if (oneMonth !== null) {
+        // Round up to nearest 0.25 to approximate upper target range bound
+        const approxUpperBound = Math.ceil((oneMonth + 0.08) * 4) / 4;
+        return { status: 'ok', data: approxUpperBound, source: 'live', timestamp: Date.now() };
+      }
+    }
+    return { status: 'ok', data: null, source: 'fallback', timestamp: Date.now() };
+  } catch {
+    return { status: 'ok', data: null, source: 'fallback', timestamp: Date.now() };
+  }
 }
 
 // TIPS breakeven - approximate from Treasury CSV

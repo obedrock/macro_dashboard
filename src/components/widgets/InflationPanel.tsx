@@ -41,7 +41,7 @@ export default function InflationPanel({ data, onExpand, onRetry, dragHandleProp
   return (
     <Widget
       title="Inflation"
-      subtitle="CPI · PCE · Market Expectations"
+      subtitle="CPI · Bureau of Labor Statistics"
       onExpand={onExpand}
       onRetry={onRetry}
       dragHandleProps={dragHandleProps}
