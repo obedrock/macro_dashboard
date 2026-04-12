@@ -1,91 +1,39 @@
 import { cache, TTL } from './cache';
-import { PriceItem, TimeSeriesPoint } from '../types';
+import { DataResult, PriceItem, TimeSeriesPoint } from '../types';
 import { mockMarketData } from '../data/mockData';
+import { rateLimiter } from './rateLimiter';
+import { RateLimitError, HttpError, ValidationError, toUserMessage, httpStatusToCategory } from './errorMessages';
+import { TdBatchResultSchema, TdQuoteSchema, TdTimeSeriesSchema } from './schemas';
+import { wsManager } from './wsManager';
 
 const API_KEY = import.meta.env.VITE_TWELVEDATA_API_KEY as string;
 const REST_BASE = 'https://api.twelvedata.com';
-const WS_URL = `wss://ws.twelvedata.com/v1/quotes/price?apikey=${API_KEY}`;
-
-export type RibbonTickUpdate = {
-  symbol: string;
-  price: number;
-  timestamp: number;
-};
-
-export type WsCallback = (update: RibbonTickUpdate) => void;
-
-const WS_SYMBOLS = ['SPY', 'QQQ', 'DIA', 'IWM', 'CL1:COM', 'XAU/USD', 'XAG/USD', 'HG1:COM'];
-
-let ws: WebSocket | null = null;
-const wsCallbacks: Set<WsCallback> = new Set();
-let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let wsConnected = false;
-export const lastPrices: Record<string, number> = {};
-export const prevPrices: Record<string, number> = {};
-
-function connectWebSocket() {
-  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
-
-  ws = new WebSocket(WS_URL);
-
-  ws.onopen = () => {
-    wsConnected = true;
-    ws!.send(JSON.stringify({ action: 'subscribe', params: { symbols: WS_SYMBOLS.join(',') } }));
-  };
-
-  ws.onmessage = (evt) => {
-    try {
-      const msg = JSON.parse(evt.data as string);
-      if (msg.event === 'price' && msg.symbol && msg.price != null) {
-        const sym = msg.symbol as string;
-        const price = parseFloat(msg.price);
-        if (!isNaN(price)) {
-          prevPrices[sym] = lastPrices[sym] ?? price;
-          lastPrices[sym] = price;
-          const update: RibbonTickUpdate = { symbol: sym, price, timestamp: Date.now() };
-          wsCallbacks.forEach(cb => cb(update));
-        }
-      }
-    } catch {}
-  };
-
-  ws.onclose = () => {
-    wsConnected = false;
-    if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
-    wsReconnectTimer = setTimeout(connectWebSocket, 5000);
-  };
-
-  ws.onerror = () => {
-    ws?.close();
-  };
-}
-
-export function subscribeWebSocket(cb: WsCallback): () => void {
-  wsCallbacks.add(cb);
-  connectWebSocket();
-  return () => {
-    wsCallbacks.delete(cb);
-    if (wsCallbacks.size === 0 && ws) {
-      ws.close();
-      ws = null;
-      wsConnected = false;
-    }
-  };
-}
-
-export function isWsConnected(): boolean {
-  return wsConnected;
-}
 
 async function tdFetch<T>(path: string): Promise<T> {
+  if (rateLimiter.isBlocked('twelvedata')) {
+    throw new RateLimitError('Rate limit reached — retrying shortly');
+  }
+
   const url = `${REST_BASE}${path}`;
   const separator = path.includes('?') ? '&' : '?';
   const res = await fetch(`${url}${separator}apikey=${API_KEY}`);
-  if (!res.ok) throw new Error(`TwelveData ${res.status}: ${path}`);
-  const json = await res.json();
-  if ((json as { status?: string }).status === 'error') {
-    throw new Error(`TwelveData: ${(json as { message?: string }).message}`);
+
+  if (res.status === 429) {
+    rateLimiter.onRateLimit('twelvedata');
+    throw new RateLimitError('Rate limit reached — retrying shortly');
   }
+
+  if (!res.ok) {
+    throw new HttpError(res.status, path);
+  }
+
+  rateLimiter.onSuccess('twelvedata');
+  const json = await res.json();
+
+  if ((json as { status?: string }).status === 'error') {
+    throw new HttpError(400, (json as { message?: string }).message ?? 'TwelveData error');
+  }
+
   return json as T;
 }
 
@@ -100,12 +48,7 @@ type TdQuote = {
   low?: string;
 };
 
-type TdBatchResult = TdQuote | { status: string; message: string };
-type TdBatchQuote = Record<string, TdBatchResult>;
-
-function isTdQuote(v: unknown): v is TdQuote {
-  return typeof v === 'object' && v !== null && 'close' in v && 'percent_change' in v;
-}
+type TdBatchQuote = Record<string, unknown>;
 
 async function fetchBatchQuotes(symbols: string[]): Promise<TdBatchQuote> {
   const joined = symbols.join(',');
@@ -114,9 +57,15 @@ async function fetchBatchQuotes(symbols: string[]): Promise<TdBatchQuote> {
   if (cached) return cached;
 
   const encoded = encodeURIComponent(joined);
-  const data = await tdFetch<TdBatchQuote>(`/quote?symbol=${encoded}&dp=4`);
-  cache.set(cacheKey, data, TTL.TWELVEDATA_REST);
-  return data;
+  const raw = await tdFetch<unknown>(`/quote?symbol=${encoded}&dp=4`);
+
+  const parsed = TdBatchResultSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new ValidationError('Unexpected data format');
+  }
+
+  cache.set(cacheKey, parsed.data as TdBatchQuote, TTL.TWELVEDATA_REST);
+  return parsed.data as TdBatchQuote;
 }
 
 async function fetchSingleQuote(symbol: string): Promise<TdQuote | null> {
@@ -126,15 +75,22 @@ async function fetchSingleQuote(symbol: string): Promise<TdQuote | null> {
 
   try {
     const encoded = encodeURIComponent(symbol);
-    const data = await tdFetch<TdQuote>(`/quote?symbol=${encoded}&dp=4`);
-    if (isTdQuote(data)) {
-      cache.set(cacheKey, data, TTL.TWELVEDATA_REST);
-      return data;
+    const raw = await tdFetch<unknown>(`/quote?symbol=${encoded}&dp=4`);
+    const parsed = TdQuoteSchema.safeParse(raw);
+    if (parsed.success) {
+      cache.set(cacheKey, parsed.data as TdQuote, TTL.TWELVEDATA_REST);
+      return parsed.data as TdQuote;
     }
     return null;
   } catch {
     return null;
   }
+}
+
+function getQuote(batch: TdBatchQuote, symbol: string): TdQuote | null {
+  const entry = batch[symbol];
+  const parsed = TdQuoteSchema.safeParse(entry);
+  return parsed.success ? parsed.data as TdQuote : null;
 }
 
 function toItem(q: TdQuote, fallback: PriceItem, label: string): PriceItem {
@@ -145,9 +101,19 @@ function toItem(q: TdQuote, fallback: PriceItem, label: string): PriceItem {
   return { ...fallback, label, value, change, changePct };
 }
 
+function etfScaled(q: TdQuote | null, fb: PriceItem, label: string, mult: number): PriceItem {
+  if (!q) return fb;
+  return {
+    ...fb, label,
+    value: parseFloat((parseFloat(q.close) * mult).toFixed(2)),
+    change: parseFloat((parseFloat(q.change) * mult).toFixed(2)),
+    changePct: parseFloat(q.percent_change),
+  };
+}
+
 function wsToItem(sym: string, fallback: PriceItem, label: string, valueMultiplier = 1): PriceItem {
-  const wsPrice = lastPrices[sym];
-  const prev = prevPrices[sym];
+  const wsPrice = wsManager.getPrice(sym);
+  const prev = wsManager.getPrevPrice(sym);
   if (wsPrice == null) return fallback;
   const value = parseFloat((wsPrice * valueMultiplier).toFixed(2));
   const change = prev ? parseFloat(((wsPrice - prev) * valueMultiplier).toFixed(3)) : 0;
@@ -155,95 +121,95 @@ function wsToItem(sym: string, fallback: PriceItem, label: string, valueMultipli
   return { ...fallback, label, value, change, changePct };
 }
 
-export async function getTwelveEquities(): Promise<PriceItem[]> {
-  const [spy, qqq, dia, iwm] = await Promise.allSettled([
-    fetchSingleQuote('SPY'),
-    fetchSingleQuote('QQQ'),
-    fetchSingleQuote('DIA'),
-    fetchSingleQuote('IWM'),
-  ]);
-  const fb = mockMarketData.equities;
+export async function getTwelveEquities(): Promise<DataResult<PriceItem[]>> {
+  try {
+    const symbols = ['SPY', 'QQQ', 'DIA', 'IWM'];
+    const batch = await fetchBatchQuotes(symbols);
+    const fb = mockMarketData.equities;
 
-  function etfScaled(q: TdQuote | null, fb: PriceItem, label: string, mult: number): PriceItem {
-    if (!q) return fb;
-    return {
-      ...fb, label,
-      value: parseFloat((parseFloat(q.close) * mult).toFixed(2)),
-      change: parseFloat((parseFloat(q.change) * mult).toFixed(2)),
-      changePct: parseFloat(q.percent_change),
-    };
+    const spyQ = getQuote(batch, 'SPY');
+    const qqqQ = getQuote(batch, 'QQQ');
+    const diaQ = getQuote(batch, 'DIA');
+    const iwmQ = getQuote(batch, 'IWM');
+    const vixFallback = fb[4];
+
+    const data: PriceItem[] = [
+      etfScaled(spyQ, fb[0], 'S&P 500', 10),
+      etfScaled(qqqQ, fb[1], 'Nasdaq', 28),
+      etfScaled(diaQ, fb[2], 'Dow Jones', 100),
+      etfScaled(iwmQ, fb[3], 'Russell 2000', 10),
+      vixFallback,
+    ];
+
+    return { status: 'ok', data, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
   }
-
-  const spyQ = spy.status === 'fulfilled' ? spy.value : null;
-  const qqqQ = qqq.status === 'fulfilled' ? qqq.value : null;
-  const diaQ = dia.status === 'fulfilled' ? dia.value : null;
-  const iwmQ = iwm.status === 'fulfilled' ? iwm.value : null;
-
-  const vixFallback = mockMarketData.equities[4];
-
-  return [
-    etfScaled(spyQ, fb[0], 'S&P 500', 10),
-    etfScaled(qqqQ, fb[1], 'Nasdaq', 28),
-    etfScaled(diaQ, fb[2], 'Dow Jones', 100),
-    etfScaled(iwmQ, fb[3], 'Russell 2000', 10),
-    vixFallback,
-  ];
 }
 
-export async function getTwelveFX(): Promise<PriceItem[]> {
-  const symbols = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CNY'];
-  const batch = await fetchBatchQuotes(symbols);
-  const fb = mockMarketData.fx;
+export async function getTwelveFX(): Promise<DataResult<PriceItem[]>> {
+  try {
+    const symbols = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CNY', 'DX-Y.NYB'];
+    const batch = await fetchBatchQuotes(symbols);
+    const fb = mockMarketData.fx;
 
-  const eurusd = isTdQuote(batch['EUR/USD']) ? batch['EUR/USD'] : null;
-  const usdjpy = isTdQuote(batch['USD/JPY']) ? batch['USD/JPY'] : null;
-  const gbpusd = isTdQuote(batch['GBP/USD']) ? batch['GBP/USD'] : null;
-  const usdcny = isTdQuote(batch['USD/CNY']) ? batch['USD/CNY'] : null;
+    const dxyQ = getQuote(batch, 'DX-Y.NYB');
+    const eurusd = getQuote(batch, 'EUR/USD');
+    const usdjpy = getQuote(batch, 'USD/JPY');
+    const gbpusd = getQuote(batch, 'GBP/USD');
+    const usdcny = getQuote(batch, 'USD/CNY');
 
-  const dxyFallback = fb[0];
+    const data: PriceItem[] = [
+      dxyQ ? toItem(dxyQ, fb[0], 'DXY') : fb[0],
+      eurusd ? toItem(eurusd, fb[1], 'EUR/USD') : fb[1],
+      usdjpy ? toItem(usdjpy, fb[2], 'USD/JPY') : fb[2],
+      gbpusd ? toItem(gbpusd, fb[3], 'GBP/USD') : fb[3],
+      usdcny ? toItem(usdcny, fb[4], 'USD/CNY') : fb[4],
+    ];
 
-  return [
-    dxyFallback,
-    eurusd ? toItem(eurusd, fb[1], 'EUR/USD') : fb[1],
-    usdjpy ? toItem(usdjpy, fb[2], 'USD/JPY') : fb[2],
-    gbpusd ? toItem(gbpusd, fb[3], 'GBP/USD') : fb[3],
-    usdcny ? toItem(usdcny, fb[4], 'USD/CNY') : fb[4],
-  ];
+    return { status: 'ok', data, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
 
-export async function getTwelveCommodities(): Promise<PriceItem[]> {
-  const [wti, gold, silver, copper, natgas] = await Promise.allSettled([
-    fetchSingleQuote('CL1:COM'),
-    fetchSingleQuote('XAU/USD'),
-    fetchSingleQuote('XAG/USD'),
-    fetchSingleQuote('HG1:COM'),
-    fetchSingleQuote('GAS/USD'),
-  ]);
+export async function getTwelveCommodities(): Promise<DataResult<PriceItem[]>> {
+  try {
+    const symbols = ['CL1:COM', 'BZ:COM', 'XAU/USD', 'XAG/USD', 'HG1:COM', 'GAS/USD'];
+    const batch = await fetchBatchQuotes(symbols);
+    const fb = mockMarketData.commodities;
 
-  const fb = mockMarketData.commodities;
+    const wtiQ = getQuote(batch, 'CL1:COM');
+    const brentQ = getQuote(batch, 'BZ:COM');
+    const goldQ = getQuote(batch, 'XAU/USD');
+    const silverQ = getQuote(batch, 'XAG/USD');
+    const copperQ = getQuote(batch, 'HG1:COM');
+    const natgasQ = getQuote(batch, 'GAS/USD');
 
-  const wtiQ = wti.status === 'fulfilled' ? wti.value : null;
-  const goldQ = gold.status === 'fulfilled' ? gold.value : null;
-  const silverQ = silver.status === 'fulfilled' ? silver.value : null;
-  const copperQ = copper.status === 'fulfilled' ? copper.value : null;
-  const natgasQ = natgas.status === 'fulfilled' ? natgas.value : null;
+    const wtiItem = wtiQ ? { ...toItem(wtiQ, fb[0], 'WTI Crude'), prefix: '$' } : fb[0];
+    const brentItem = brentQ ? { ...toItem(brentQ, fb[1], 'Brent Crude'), prefix: '$' } : fb[1];
+    const natgasItem = natgasQ ? { ...toItem(natgasQ, fb[2], 'Natural Gas'), prefix: '$' } : fb[2];
+    const goldItem = goldQ ? { ...toItem(goldQ, fb[3], 'Gold'), prefix: '$' } : fb[3];
+    const silverItem = silverQ ? { ...toItem(silverQ, fb[4], 'Silver'), prefix: '$' } : fb[4];
+    const copperItem = copperQ ? { ...toItem(copperQ, fb[5], 'Copper'), prefix: '$' } : fb[5];
 
-  const wtiItem = wtiQ ? { ...toItem(wtiQ, fb[0], 'WTI Crude'), prefix: '$' } : fb[0];
-  const goldItem = goldQ ? { ...toItem(goldQ, fb[3], 'Gold'), prefix: '$' } : fb[3];
-  const silverItem = silverQ ? { ...toItem(silverQ, fb[4], 'Silver'), prefix: '$' } : fb[4];
-  const copperItem = copperQ ? { ...toItem(copperQ, fb[5], 'Copper'), prefix: '$' } : fb[5];
-  const natgasItem = natgasQ ? { ...toItem(natgasQ, fb[2], 'Natural Gas'), prefix: '$' } : fb[2];
-
-  const brentItem = wtiQ
-    ? {
-        ...fb[1],
-        value: parseFloat((parseFloat(wtiQ.close) + 2.57).toFixed(2)),
-        change: parseFloat(wtiQ.change),
-        changePct: parseFloat(wtiQ.percent_change),
-      }
-    : fb[1];
-
-  return [wtiItem, brentItem, natgasItem, goldItem, silverItem, copperItem];
+    const data: PriceItem[] = [wtiItem, brentItem, natgasItem, goldItem, silverItem, copperItem];
+    return { status: 'ok', data, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
 
 export type TwelveRatesResult = {
@@ -258,67 +224,85 @@ export type TwelveRatesResult = {
   y30Val: number | null;
 };
 
-export async function getTwelveRates(): Promise<TwelveRatesResult> {
-  const [y2Q, y5Q, y10Q, y20Q, y30Q] = await Promise.allSettled([
-    fetchSingleQuote('US2Y'),
-    fetchSingleQuote('US5Y'),
-    fetchSingleQuote('US10Y'),
-    fetchSingleQuote('US20Y'),
-    fetchSingleQuote('US30Y'),
-  ]);
+export async function getTwelveRates(): Promise<DataResult<TwelveRatesResult>> {
+  try {
+    const symbols = ['US2Y', 'US5Y', 'US10Y', 'US20Y', 'US30Y'];
+    const batch = await fetchBatchQuotes(symbols);
 
-  const y2 = y2Q.status === 'fulfilled' ? y2Q.value : null;
-  const y5 = y5Q.status === 'fulfilled' ? y5Q.value : null;
-  const y10 = y10Q.status === 'fulfilled' ? y10Q.value : null;
-  const y20 = y20Q.status === 'fulfilled' ? y20Q.value : null;
-  const y30 = y30Q.status === 'fulfilled' ? y30Q.value : null;
+    const y2 = getQuote(batch, 'US2Y');
+    const y5 = getQuote(batch, 'US5Y');
+    const y10 = getQuote(batch, 'US10Y');
+    const y20 = getQuote(batch, 'US20Y');
+    const y30 = getQuote(batch, 'US30Y');
 
-  return {
-    y2Val: y2 ? parseFloat(parseFloat(y2.close).toFixed(3)) : null,
-    y2Change: y2 ? parseFloat(y2.change) : null,
-    y2Pct: y2 ? parseFloat(y2.percent_change) : null,
-    y5Val: y5 ? parseFloat(parseFloat(y5.close).toFixed(3)) : null,
-    y10Val: y10 ? parseFloat(parseFloat(y10.close).toFixed(3)) : null,
-    y10Change: y10 ? parseFloat(y10.change) : null,
-    y10Pct: y10 ? parseFloat(y10.percent_change) : null,
-    y20Val: y20 ? parseFloat(parseFloat(y20.close).toFixed(3)) : null,
-    y30Val: y30 ? parseFloat(parseFloat(y30.close).toFixed(3)) : null,
-  };
+    const data: TwelveRatesResult = {
+      y2Val: y2 ? parseFloat(parseFloat(y2.close).toFixed(3)) : null,
+      y2Change: y2 ? parseFloat(y2.change) : null,
+      y2Pct: y2 ? parseFloat(y2.percent_change) : null,
+      y5Val: y5 ? parseFloat(parseFloat(y5.close).toFixed(3)) : null,
+      y10Val: y10 ? parseFloat(parseFloat(y10.close).toFixed(3)) : null,
+      y10Change: y10 ? parseFloat(y10.change) : null,
+      y10Pct: y10 ? parseFloat(y10.percent_change) : null,
+      y20Val: y20 ? parseFloat(parseFloat(y20.close).toFixed(3)) : null,
+      y30Val: y30 ? parseFloat(parseFloat(y30.close).toFixed(3)) : null,
+    };
+
+    return { status: 'ok', data, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
-
-type TdTimeSeries = {
-  values: { datetime: string; close: string }[];
-};
 
 export async function getTwelveTimeSeries(
   symbol: string,
   interval: string,
   outputsize: number
-): Promise<TimeSeriesPoint[]> {
+): Promise<DataResult<TimeSeriesPoint[]>> {
   const cacheKey = `td:ts:${symbol}:${interval}:${outputsize}`;
   const cached = cache.get<TimeSeriesPoint[]>(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    return { status: 'ok', data: cached, source: 'cache', timestamp: Date.now() };
+  }
 
-  const encoded = encodeURIComponent(symbol);
-  const data = await tdFetch<TdTimeSeries>(
-    `/time_series?symbol=${encoded}&interval=${interval}&outputsize=${outputsize}&dp=4`
-  );
+  try {
+    const encoded = encodeURIComponent(symbol);
+    const raw = await tdFetch<unknown>(
+      `/time_series?symbol=${encoded}&interval=${interval}&outputsize=${outputsize}&dp=4`
+    );
 
-  if (!data.values?.length) throw new Error('No time series data');
+    const parsed = TdTimeSeriesSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new ValidationError('Unexpected data format');
+    }
 
-  const points: TimeSeriesPoint[] = data.values
-    .map(v => ({ date: v.datetime, value: parseFloat(v.close) }))
-    .reverse();
+    if (!parsed.data.values?.length) {
+      throw new ValidationError('No time series data');
+    }
 
-  cache.set(cacheKey, points, TTL.TWELVEDATA_REST);
-  return points;
+    const points: TimeSeriesPoint[] = parsed.data.values
+      .map(v => ({ date: v.datetime, value: parseFloat(v.close) }))
+      .reverse();
+
+    cache.set(cacheKey, points, TTL.TWELVEDATA_REST);
+    return { status: 'ok', data: points, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
 
 export function buildRibbonFromWs(fallback: PriceItem[]): PriceItem[] {
-  const spyWs = lastPrices['SPY'];
-  const prevSpy = prevPrices['SPY'];
-  const wtiWs = lastPrices['CL1:COM'];
-  const goldWs = lastPrices['XAU/USD'];
+  const spyWs = wsManager.getPrice('SPY');
+  const prevSpy = wsManager.getPrevPrice('SPY');
+  const wtiWs = wsManager.getPrice('CL1:COM');
+  const goldWs = wsManager.getPrice('XAU/USD');
 
   return [
     spyWs != null
@@ -337,3 +321,7 @@ export function buildRibbonFromWs(fallback: PriceItem[]): PriceItem[] {
     fallback[5],
   ];
 }
+
+// Unused export kept for module interface compatibility during Plan 02 transition
+// Plan 03 (hook migration) will update callers to handle DataResult
+export { fetchSingleQuote };

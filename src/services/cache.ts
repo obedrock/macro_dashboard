@@ -32,5 +32,4 @@ export const TTL = {
   FINNHUB: 5 * 60 * 1000,
   FINNHUB_CALENDAR: 6 * 60 * 60 * 1000,
   FRED: 24 * 60 * 60 * 1000,
-  MASSIVE: 5 * 60 * 1000,
 };

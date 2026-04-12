@@ -1,15 +1,32 @@
 import { cache, TTL } from './cache';
-import { NewsItem, EconomicEvent } from '../types';
-import { mockNews, mockEconomicCalendar, mockFomcData } from '../data/mockData';
+import { DataResult, NewsItem, EconomicEvent, FomcData } from '../types';
+import { mockFomcData } from '../data/mockData';
+import { rateLimiter } from './rateLimiter';
+import { RateLimitError, HttpError, ValidationError, toUserMessage, httpStatusToCategory } from './errorMessages';
+import { FinnhubNewsResponseSchema, FinnhubCalendarResponseSchema } from './schemas';
 
 const API_KEY = import.meta.env.VITE_FINNHUB_API_KEY as string;
 const BASE = 'https://finnhub.io/api/v1';
 
 async function finnhubFetch<T>(path: string): Promise<T> {
+  if (rateLimiter.isBlocked('finnhub')) {
+    throw new RateLimitError(`Rate limit reached — retrying shortly`);
+  }
+
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'X-Finnhub-Token': API_KEY },
   });
-  if (!res.ok) throw new Error(`Finnhub ${res.status}: ${path}`);
+
+  if (res.status === 429) {
+    rateLimiter.onRateLimit('finnhub');
+    throw new RateLimitError('Rate limit reached — retrying shortly');
+  }
+
+  if (!res.ok) {
+    throw new HttpError(res.status, path);
+  }
+
+  rateLimiter.onSuccess('finnhub');
   return res.json() as Promise<T>;
 }
 
@@ -32,59 +49,6 @@ function formatNewsTime(ts: number): string {
   if (diffHr < 24) return `${diffHr} hr ago`;
   return `${Math.floor(diffHr / 24)} days ago`;
 }
-
-type FinnhubNewsRaw = {
-  id: number;
-  headline: string;
-  source: string;
-  datetime: number;
-  url: string;
-  summary?: string;
-};
-
-export async function getFinnhubNews(): Promise<NewsItem[]> {
-  const cacheKey = 'finnhub:news:general';
-  const cached = cache.get<NewsItem[]>(cacheKey);
-  if (cached) return cached;
-
-  try {
-    const raw = await finnhubFetch<FinnhubNewsRaw[]>('/news?category=general');
-    const items: NewsItem[] = raw
-      .filter(n => n.headline && n.source && n.url)
-      .slice(0, 20)
-      .map(n => ({
-        id: String(n.id),
-        headline: n.headline,
-        source: n.source,
-        time: formatNewsTime(n.datetime),
-        url: n.url,
-        sentiment: classifySentiment(n.headline),
-      }));
-
-    if (items.length > 0) {
-      cache.set(cacheKey, items, TTL.FINNHUB);
-      return items;
-    }
-    return mockNews;
-  } catch {
-    return mockNews;
-  }
-}
-
-type FinnhubCalendarEvent = {
-  event: string;
-  time: string;
-  date: string;
-  country: string;
-  impact: string;
-  prev: string | null;
-  estimate: string | null;
-  actual: string | null;
-};
-
-type FinnhubCalendarResponse = {
-  economicCalendar?: FinnhubCalendarEvent[];
-};
 
 function mapImpact(impact: string): 'high' | 'medium' | 'low' {
   if (impact === '3' || impact === 'high') return 'high';
@@ -113,22 +77,66 @@ function formatEventTime(timeStr: string): string {
   }
 }
 
-export async function getFinnhubEconomicCalendar(): Promise<EconomicEvent[]> {
+export async function getFinnhubNews(): Promise<DataResult<NewsItem[]>> {
+  const cacheKey = 'finnhub:news:general';
+  const cached = cache.get<NewsItem[]>(cacheKey);
+  if (cached) {
+    return { status: 'ok', data: cached, source: 'cache', timestamp: Date.now() };
+  }
+
+  try {
+    const raw = await finnhubFetch<unknown>('/news?category=general');
+    const parsed = FinnhubNewsResponseSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new ValidationError('Unexpected data format');
+    }
+
+    const items: NewsItem[] = parsed.data
+      .filter(n => n.headline && n.source && n.url)
+      .slice(0, 20)
+      .map(n => ({
+        id: String(n.id),
+        headline: n.headline,
+        source: n.source,
+        time: formatNewsTime(n.datetime),
+        url: n.url,
+        sentiment: classifySentiment(n.headline),
+      }));
+
+    cache.set(cacheKey, items, TTL.FINNHUB);
+    return { status: 'ok', data: items, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
+}
+
+export async function getFinnhubEconomicCalendar(): Promise<DataResult<EconomicEvent[]>> {
   const cacheKey = 'finnhub:calendar';
   const cached = cache.get<EconomicEvent[]>(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    return { status: 'ok', data: cached, source: 'cache', timestamp: Date.now() };
+  }
 
   try {
     const now = new Date();
     const fromDate = now.toISOString().split('T')[0];
     const toDate = new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    const raw = await finnhubFetch<FinnhubCalendarResponse>(
+    const raw = await finnhubFetch<unknown>(
       `/calendar/economic?from=${fromDate}&to=${toDate}`
     );
 
-    const events = raw.economicCalendar ?? [];
-    const usEvents = events
+    const parsed = FinnhubCalendarResponseSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new ValidationError('Unexpected data format');
+    }
+
+    const events = parsed.data.economicCalendar ?? [];
+    const usEvents: EconomicEvent[] = events
       .filter(e => e.country === 'US' && e.event)
       .slice(0, 20)
       .map((e, i) => ({
@@ -142,13 +150,14 @@ export async function getFinnhubEconomicCalendar(): Promise<EconomicEvent[]> {
         importance: mapImpact(e.impact),
       }));
 
-    if (usEvents.length > 0) {
-      cache.set(cacheKey, usEvents, TTL.FINNHUB_CALENDAR);
-      return usEvents;
-    }
-    return mockEconomicCalendar;
-  } catch {
-    return mockEconomicCalendar;
+    cache.set(cacheKey, usEvents, TTL.FINNHUB_CALENDAR);
+    return { status: 'ok', data: usEvents, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    let category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    if (e instanceof RateLimitError) category = 'rate_limit';
+    else if (e instanceof ValidationError) category = 'validation';
+    else if (e instanceof HttpError) category = httpStatusToCategory(e.status);
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
   }
 }
 
@@ -182,21 +191,28 @@ export function getUpcomingFomcDates(): string[] {
   return upcoming.length > 0 ? upcoming : FOMC_DATES_2026.slice(0, 3);
 }
 
-export async function getFinnhubFedWatch(): Promise<typeof mockFomcData> {
+export async function getFinnhubFedWatch(): Promise<DataResult<FomcData>> {
   const cacheKey = 'finnhub:fedwatch';
-  const cached = cache.get<typeof mockFomcData>(cacheKey);
-  if (cached) return cached;
+  const cached = cache.get<FomcData>(cacheKey);
+  if (cached) {
+    return { status: 'ok', data: cached, source: 'cache', timestamp: Date.now() };
+  }
 
-  const dates = getUpcomingFomcDates();
-  const result = {
-    ...mockFomcData,
-    nextMeeting: dates[0] ?? mockFomcData.nextMeeting,
-    meetings: mockFomcData.meetings.map((m, i) => ({
-      ...m,
-      date: dates[i] ?? m.date,
-    })),
-  };
+  try {
+    const dates = getUpcomingFomcDates();
+    const result: FomcData = {
+      ...mockFomcData,
+      nextMeeting: dates[0] ?? mockFomcData.nextMeeting,
+      meetings: mockFomcData.meetings.map((m, i) => ({
+        ...m,
+        date: dates[i] ?? m.date,
+      })),
+    };
 
-  cache.set(cacheKey, result, TTL.FINNHUB_CALENDAR);
-  return result;
+    cache.set(cacheKey, result, TTL.FINNHUB_CALENDAR);
+    return { status: 'ok', data: result, source: 'live', timestamp: Date.now() };
+  } catch (e) {
+    const category: ReturnType<typeof httpStatusToCategory> = 'unknown';
+    return { status: 'error', error: toUserMessage(category), source: 'fallback', timestamp: Date.now() };
+  }
 }
