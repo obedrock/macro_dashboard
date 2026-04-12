@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { WidgetConfig, WidgetId, WidgetStatuses } from '../../types';
 import { useDashboard } from '../../context/DashboardContext';
 import { MarketData, EconomicEvent, NewsItem } from '../../types';
+import WidgetErrorBoundary from '../shared/WidgetErrorBoundary';
 
 import RatesPanel from '../widgets/RatesPanel';
 import EquitiesPanel from '../widgets/EquitiesPanel';
@@ -77,113 +78,133 @@ export default function DashboardGrid({ data, events, news, statuses, onExpandWi
       case 'yields':
         return (
           <div key={widget.id} className={wrapClass}>
-            <YieldCurveChart
-              data={data.yieldCurve}
-              status={statuses.yields}
-              onRetry={() => onRetry('yields')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <YieldCurveChart
+                data={data.yieldCurve}
+                status={statuses.yields}
+                onRetry={() => onRetry('yields')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'rates':
         return (
           <div key={widget.id} className={wrapClass}>
-            <RatesPanel
-              data={data.rates}
-              status={statuses.rates}
-              onRetry={() => onRetry('rates')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <RatesPanel
+                data={data.rates}
+                status={statuses.rates}
+                onRetry={() => onRetry('rates')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'equities':
         return (
           <div key={widget.id} className={wrapClass}>
-            <EquitiesPanel
-              data={data.equities}
-              status={statuses.equities}
-              onRetry={() => onRetry('equities')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <EquitiesPanel
+                data={data.equities}
+                status={statuses.equities}
+                onRetry={() => onRetry('equities')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'fx':
         return (
           <div key={widget.id} className={wrapClass}>
-            <FXPanel
-              data={data.fx}
-              status={statuses.fx}
-              onRetry={() => onRetry('fx')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <FXPanel
+                data={data.fx}
+                status={statuses.fx}
+                onRetry={() => onRetry('fx')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'commodities':
         return (
           <div key={widget.id} className={wrapClass}>
-            <CommoditiesPanel
-              data={data.commodities}
-              status={statuses.commodities}
-              onRetry={() => onRetry('commodities')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <CommoditiesPanel
+                data={data.commodities}
+                status={statuses.commodities}
+                onRetry={() => onRetry('commodities')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'credit':
         return (
           <div key={widget.id} className={wrapClass}>
-            <CreditPanel
-              data={data.credit}
-              status={statuses.credit}
-              onRetry={() => onRetry('credit')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <CreditPanel
+                data={data.credit}
+                status={statuses.credit}
+                onRetry={() => onRetry('credit')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'inflation':
         return (
           <div key={widget.id} className={wrapClass}>
-            <InflationPanel
-              data={data.inflation}
-              status={statuses.inflation}
-              onRetry={() => onRetry('inflation')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <InflationPanel
+                data={data.inflation}
+                status={statuses.inflation}
+                onRetry={() => onRetry('inflation')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'calendar':
         return (
           <div key={widget.id} className={wrapClass}>
-            <EconomicCalendar
-              events={events}
-              status={statuses.calendar}
-              onRetry={() => onRetry('calendar')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <EconomicCalendar
+                events={events}
+                status={statuses.calendar}
+                onRetry={() => onRetry('calendar')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'fedwatch':
         return (
           <div key={widget.id} className={wrapClass}>
-            <FedWatchWidget
-              nextMeeting={data.fomc.nextMeeting}
-              currentRate={data.fomc.currentRate}
-              meetings={data.fomc.meetings}
-              status={statuses.calendar}
-              onRetry={() => onRetry('calendar')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <FedWatchWidget
+                nextMeeting={data.fomc.nextMeeting}
+                currentRate={data.fomc.currentRate}
+                meetings={data.fomc.meetings}
+                status={statuses.calendar}
+                onRetry={() => onRetry('calendar')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       case 'news':
         return (
           <div key={widget.id} className={wrapClass}>
-            <NewsWidget
-              news={news}
-              status={statuses.news}
-              onRetry={() => onRetry('news')}
-              {...baseProps}
-            />
+            <WidgetErrorBoundary widgetTitle={widget.label}>
+              <NewsWidget
+                news={news}
+                status={statuses.news}
+                onRetry={() => onRetry('news')}
+                {...baseProps}
+              />
+            </WidgetErrorBoundary>
           </div>
         );
       default:
