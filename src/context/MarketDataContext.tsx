@@ -134,22 +134,22 @@ export function MarketDataProvider({ children }: { children: React.ReactNode }) 
   }, [rates.y10Val]);
 
   useEffect(() => {
-    if (rates.vix !== null) {
+    // VIX now comes from Twelve Data via equities hook
+    const vixItem = equities.data[4];
+    if (vixItem && vixItem.value !== mockMarketData.equities[4].value) {
       setRibbonData(prev => {
         const next = [...prev];
-        next[5] = { ...next[5], value: rates.vix! };
+        next[5] = { ...next[5], value: vixItem.value, change: vixItem.change, changePct: vixItem.changePct };
         ribbonBase.current = next;
         return next;
       });
     }
-  }, [rates.vix]);
+  }, [equities.data]);
 
   const data: MarketData = {
     ribbon: ribbonData,
     rates: rates.data,
-    equities: rates.vix !== null
-      ? equities.data.map((e, i) => i === 4 ? { ...e, value: rates.vix! } : e)
-      : equities.data,
+    equities: equities.data,
     fx: fx.data,
     commodities: commodities.data,
     credit: credit.data,

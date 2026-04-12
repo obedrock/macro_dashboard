@@ -123,7 +123,7 @@ function wsToItem(sym: string, fallback: PriceItem, label: string, valueMultipli
 
 export async function getTwelveEquities(): Promise<DataResult<PriceItem[]>> {
   try {
-    const symbols = ['SPY', 'QQQ', 'DIA', 'IWM'];
+    const symbols = ['SPY', 'QQQ', 'DIA', 'IWM', 'VIX'];
     const batch = await fetchBatchQuotes(symbols);
     const fb = mockMarketData.equities;
 
@@ -131,14 +131,21 @@ export async function getTwelveEquities(): Promise<DataResult<PriceItem[]>> {
     const qqqQ = getQuote(batch, 'QQQ');
     const diaQ = getQuote(batch, 'DIA');
     const iwmQ = getQuote(batch, 'IWM');
-    const vixFallback = fb[4];
+    const vixQ = getQuote(batch, 'VIX');
+
+    const vixItem: PriceItem = vixQ ? {
+      label: 'VIX',
+      value: parseFloat(parseFloat(vixQ.close).toFixed(2)),
+      change: parseFloat(parseFloat(vixQ.change).toFixed(2)),
+      changePct: parseFloat(parseFloat(vixQ.percent_change).toFixed(2)),
+    } : fb[4];
 
     const data: PriceItem[] = [
       etfScaled(spyQ, fb[0], 'S&P 500', 10),
       etfScaled(qqqQ, fb[1], 'Nasdaq', 28),
       etfScaled(diaQ, fb[2], 'Dow Jones', 100),
       etfScaled(iwmQ, fb[3], 'Russell 2000', 10),
-      vixFallback,
+      vixItem,
     ];
 
     return { status: 'ok', data, source: 'live', timestamp: Date.now() };

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetStatus, DataSource } from '../types';
 import { mockMarketData } from '../data/mockData';
-import { getLiveInflation, InflationItem } from '../services/fredService';
+import { InflationItem } from '../services/fredService';
+import { getBlsInflation } from '../services/blsService';
 import { loadingStatus, loadedStatus, errorStatus, warnedStatus } from './statusUtils';
 
 const INFLATION_CHECK_MS = 24 * 60 * 60 * 1000;
@@ -24,7 +25,7 @@ export function useInflation(): InflationHookResult {
   const fetch = useCallback(async (forceRefresh = false) => {
     setStatus(loadingStatus);
     try {
-      const result = await getLiveInflation();
+      const result = await getBlsInflation();
       if (result.status === 'error') {
         setStatus(errorStatus(result.error));
         return;
