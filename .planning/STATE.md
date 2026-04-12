@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 4 context gathered
-last_updated: "2026-04-12T05:04:42.328Z"
+status: Ready to execute
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-04-12T06:58:50.258Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** All panels reliably display real, current market data with clear indication of data freshness and error states — no silent failures, no ambiguous mock data
-**Current focus:** Phase 03 — websocket-reliability
+**Current focus:** Phase 04 — architecture-decomposition
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 04 (architecture-decomposition) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Plan: Not started
 | Phase 03-websocket-reliability P01 | 720 | 2 tasks | 2 files |
 | Phase 03-websocket-reliability P02 | 480 | 2 tasks | 2 files |
 | Phase 03-websocket-reliability P03 | 300 | 1 tasks | 2 files |
+| Phase 04-architecture-decomposition P01 | 142 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 03-websocket-reliability]: ribbonBase.current mutation inside setData updater preserved from existing code — cleanup deferred to Phase 4 (not introduced by this plan)
 - [Phase 03-websocket-reliability]: WsStatus not re-imported in App.tsx — wsStatus value passes through by inference, avoiding noUnusedLocals error
 - [Phase 03-websocket-reliability]: Minimal wsStatus indicator (dot + short text label) in SummaryRibbon — Phase 5 (UI-03) will polish with reconnect button
+- [Phase 04-architecture-decomposition]: useRates exposes y10Val and vix as separate state fields for cross-domain merging in Plan 02 context
+- [Phase 04-architecture-decomposition]: ResultWarning type added to types/index.ts per CLAUDE.md convention (domain types are named exports from src/types/index.ts)
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T05:04:42.324Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-architecture-decomposition/04-CONTEXT.md
+Last session: 2026-04-12T06:58:50.251Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
