@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MarketData, WidgetStatuses, WidgetStatus, PriceItem } from '../types';
+import { MarketData, WidgetStatuses, WidgetStatus, PriceItem, ResultWarning } from '../types';
 import { mockMarketData } from '../data/mockData';
 import {
   getTwelveEquities,
@@ -62,6 +62,9 @@ const loadedStatus: WidgetStatus = { state: 'loaded' };
 function errorStatus(msg: string): WidgetStatus {
   return { state: 'error', error: msg };
 }
+function warnedStatus(warnings: ResultWarning[]): WidgetStatus {
+  return { state: 'loaded', error: warnings.map(w => w.message).join('; ') };
+}
 
 const DEFAULT_STATUSES: WidgetStatuses = {
   ribbon: loadingStatus,
@@ -90,9 +93,13 @@ export function useMarketData() {
   const fetchEquities = useCallback(async () => {
     setStatus('equities', loadingStatus);
     try {
-      const equities = await getTwelveEquities();
-      setData(prev => ({ ...prev, equities }));
-      setStatus('equities', loadedStatus);
+      const result = await getTwelveEquities();
+      if (result.status === 'error') {
+        setStatus('equities', errorStatus(result.error));
+        return;
+      }
+      setData(prev => ({ ...prev, equities: result.data }));
+      setStatus('equities', result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus('equities', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
@@ -101,9 +108,13 @@ export function useMarketData() {
   const fetchFX = useCallback(async () => {
     setStatus('fx', loadingStatus);
     try {
-      const fx = await getTwelveFX();
-      setData(prev => ({ ...prev, fx }));
-      setStatus('fx', loadedStatus);
+      const result = await getTwelveFX();
+      if (result.status === 'error') {
+        setStatus('fx', errorStatus(result.error));
+        return;
+      }
+      setData(prev => ({ ...prev, fx: result.data }));
+      setStatus('fx', result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus('fx', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
@@ -112,9 +123,13 @@ export function useMarketData() {
   const fetchCommodities = useCallback(async () => {
     setStatus('commodities', loadingStatus);
     try {
-      const commodities = await getTwelveCommodities();
-      setData(prev => ({ ...prev, commodities }));
-      setStatus('commodities', loadedStatus);
+      const result = await getTwelveCommodities();
+      if (result.status === 'error') {
+        setStatus('commodities', errorStatus(result.error));
+        return;
+      }
+      setData(prev => ({ ...prev, commodities: result.data }));
+      setStatus('commodities', result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus('commodities', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
@@ -202,9 +217,13 @@ export function useMarketData() {
   const fetchCredit = useCallback(async () => {
     setStatus('credit', loadingStatus);
     try {
-      const credit = await getLiveCreditSpreads();
-      setData(prev => ({ ...prev, credit }));
-      setStatus('credit', loadedStatus);
+      const result = await getLiveCreditSpreads();
+      if (result.status === 'error') {
+        setStatus('credit', errorStatus(result.error));
+        return;
+      }
+      setData(prev => ({ ...prev, credit: result.data }));
+      setStatus('credit', result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus('credit', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
@@ -232,9 +251,13 @@ export function useMarketData() {
   const fetchNews = useCallback(async () => {
     setStatus('news', loadingStatus);
     try {
-      const news = await getFinnhubNews();
-      setData(prev => ({ ...prev, news }));
-      setStatus('news', loadedStatus);
+      const result = await getFinnhubNews();
+      if (result.status === 'error') {
+        setStatus('news', errorStatus(result.error));
+        return;
+      }
+      setData(prev => ({ ...prev, news: result.data }));
+      setStatus('news', result.warnings?.length ? warnedStatus(result.warnings) : loadedStatus);
     } catch (e) {
       setStatus('news', errorStatus(e instanceof Error ? e.message : 'Failed to load'));
     }
