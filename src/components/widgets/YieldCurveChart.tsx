@@ -33,17 +33,8 @@ export default function YieldCurveChart({ data, onExpand, onRetry, dragHandlePro
   const minY = allValues.length > 0 ? Math.floor(Math.min(...allValues) * 4) / 4 : 3;
   const maxY = allValues.length > 0 ? Math.ceil(Math.max(...allValues) * 4) / 4 + 0.25 : 5;
 
-  // Compute spreads from actual data
-  const getRate = (maturity: string) => data.find(d => d.maturity === maturity)?.current ?? 0;
-  const y2 = getRate('2Y');
-  const y3m = getRate('3M');
-  const y10 = getRate('10Y');
-  const y30 = getRate('30Y');
-  const spread2s10s = y2 && y10 ? ((y10 - y2) * 100).toFixed(1) : null;
-  const spread2s30s = y2 && y30 ? ((y30 - y2) * 100).toFixed(1) : null;
-  const spread3m10y = y3m && y10 ? ((y10 - y3m) * 100).toFixed(1) : null;
-
   // Fed funds rate approximation from 1M yield (upper target ≈ ceil to nearest 0.25)
+  const getRate = (maturity: string) => data.find(d => d.maturity === maturity)?.current ?? 0;
   const y1m = getRate('1M');
   const fedFundsApprox = y1m > 0 ? Math.ceil((y1m + 0.08) * 4) / 4 : null;
 
@@ -155,31 +146,10 @@ export default function YieldCurveChart({ data, onExpand, onRetry, dragHandlePro
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-3 flex items-center gap-4 px-1">
-        {spread2s10s !== null && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500">2s10s:</span>
-            <span className={`text-xs font-mono ${parseFloat(spread2s10s) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {parseFloat(spread2s10s) >= 0 ? '+' : ''}{spread2s10s} bps
-            </span>
-          </div>
-        )}
-        {spread2s30s !== null && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500">2s30s:</span>
-            <span className={`text-xs font-mono ${parseFloat(spread2s30s) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {parseFloat(spread2s30s) >= 0 ? '+' : ''}{spread2s30s} bps
-            </span>
-          </div>
-        )}
-        {spread3m10y !== null && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500">3m10y:</span>
-            <span className={`text-xs font-mono ${parseFloat(spread3m10y) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {parseFloat(spread3m10y) >= 0 ? '+' : ''}{spread3m10y} bps
-            </span>
-          </div>
-        )}
+      <div className="mt-2 flex items-center gap-4 px-1 text-[10px] text-slate-500">
+        <span>Source: US Treasury daily rates</span>
+        {fedFundsApprox !== null && <span>·</span>}
+        {fedFundsApprox !== null && <span>Fed target ≈ {(fedFundsApprox - 0.25).toFixed(2)}–{fedFundsApprox.toFixed(2)}%</span>}
       </div>
     </Widget>
   );

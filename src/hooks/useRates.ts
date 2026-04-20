@@ -70,7 +70,7 @@ export function useRates(): RatesHookResult {
 
       const rates: PriceItem[] = [
         fedFundsRate != null
-          ? { ...fb[0], value: parseFloat((fedFundsRate - 0.125).toFixed(3)) }
+          ? { ...fb[0], value: parseFloat(fedFundsRate.toFixed(3)) }
           : fb[0],
         {
           ...fb[1],

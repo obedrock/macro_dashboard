@@ -33,15 +33,15 @@ function genInflationSeries(base: number, months: number): TimeSeriesPoint[] {
 
 export const mockMarketData: MarketData = {
   ribbon: [
-    { label: 'S&P 500 (SPY)', value: 679.46, change: -0.45, changePct: -0.07 },
+    { label: 'S&P 500', value: 679.46, change: -0.45, changePct: -0.07 },
     { label: '10Y Yield', value: 4.31, change: 0.02, changePct: 0.47, unit: '%' },
     { label: 'DXY', value: 99.80, change: -0.15, changePct: -0.15 },
     { label: 'WTI Crude', value: 60.07, change: 0.44, changePct: 0.74, prefix: '$' },
     { label: 'Gold', value: 3237.0, change: 12.5, changePct: 0.39, prefix: '$' },
-    { label: 'VIX (VIXY)', value: 25.78, change: -1.2, changePct: -4.45 },
+    { label: 'VIX', value: 25.78, change: -1.2, changePct: -4.45 },
   ],
   rates: [
-    { label: 'Fed Funds', value: 4.375, change: 0, changePct: 0, unit: '%' },
+    { label: 'Fed Funds', value: 3.75, change: 0, changePct: 0, unit: '%' },
     { label: '2Y Treasury', value: 3.79, change: -0.041, changePct: -1.08, unit: '%' },
     { label: '5Y Treasury', value: 3.95, change: -0.02, changePct: -0.50, unit: '%' },
     { label: '10Y Treasury', value: 4.33, change: 0.01, changePct: 0.23, unit: '%' },
@@ -52,11 +52,11 @@ export const mockMarketData: MarketData = {
     { label: '2s30s Spread', value: 111.0, change: 2.0, changePct: 1.84, unit: 'bps' },
   ],
   equities: [
-    { label: 'S&P 500 (SPY)', value: 679.46, change: -0.45, changePct: -0.07 },
-    { label: 'Nasdaq 100 (QQQ)', value: 611.07, change: -3.20, changePct: -0.52 },
-    { label: 'Dow Jones (DIA)', value: 479.25, change: -1.50, changePct: -0.31 },
-    { label: 'Russell 2000 (IWM)', value: 261.30, change: -2.10, changePct: -0.80 },
-    { label: 'VIX (VIXY)', value: 25.78, change: -1.2, changePct: -4.45 },
+    { label: 'S&P 500', value: 679.46, change: -0.45, changePct: -0.07 },
+    { label: 'Nasdaq 100', value: 611.07, change: -3.20, changePct: -0.52 },
+    { label: 'Dow Jones', value: 479.25, change: -1.50, changePct: -0.31 },
+    { label: 'Russell 2000', value: 261.30, change: -2.10, changePct: -0.80 },
+    { label: 'VIX', value: 25.78, change: -1.2, changePct: -4.45 },
   ],
   fx: [
     { label: 'DXY', value: 103.50, change: -0.22, changePct: -0.21 },

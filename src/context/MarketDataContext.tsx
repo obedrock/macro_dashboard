@@ -122,6 +122,26 @@ export function MarketDataProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
+  // Sync ribbon from REST data so ticker strip matches cards
+  // Ribbon layout: [0] S&P 500 (SPY), [1] 10Y Yield, [2] DXY, [3] WTI, [4] Gold, [5] VIX
+  useEffect(() => {
+    setRibbonData(prev => {
+      const next = [...prev];
+      // SPY from equities
+      const spy = equities.data[0];
+      if (spy && spy.value !== mockMarketData.equities[0].value) {
+        next[0] = { ...next[0], value: spy.value, change: spy.change, changePct: spy.changePct };
+      }
+      // VIX from equities
+      const vix = equities.data[4];
+      if (vix && vix.value !== mockMarketData.equities[4].value) {
+        next[5] = { ...next[5], value: vix.value, change: vix.change, changePct: vix.changePct };
+      }
+      ribbonBase.current = next;
+      return next;
+    });
+  }, [equities.data]);
+
   useEffect(() => {
     if (rates.y10Val !== null) {
       setRibbonData(prev => {
@@ -134,17 +154,34 @@ export function MarketDataProvider({ children }: { children: React.ReactNode }) 
   }, [rates.y10Val]);
 
   useEffect(() => {
-    // VIX now comes from Twelve Data via equities hook
-    const vixItem = equities.data[4];
-    if (vixItem && vixItem.value !== mockMarketData.equities[4].value) {
+    // DXY from FX hook (index 0)
+    const dxy = fx.data[0];
+    if (dxy && dxy.value !== mockMarketData.fx[0].value) {
       setRibbonData(prev => {
         const next = [...prev];
-        next[5] = { ...next[5], value: vixItem.value, change: vixItem.change, changePct: vixItem.changePct };
+        next[2] = { ...next[2], value: dxy.value, change: dxy.change, changePct: dxy.changePct };
         ribbonBase.current = next;
         return next;
       });
     }
-  }, [equities.data]);
+  }, [fx.data]);
+
+  useEffect(() => {
+    // WTI from commodities hook (index 0), Gold (index 3)
+    const wti = commodities.data[0];
+    const gold = commodities.data[3];
+    setRibbonData(prev => {
+      const next = [...prev];
+      if (wti && wti.value !== mockMarketData.commodities[0].value) {
+        next[3] = { ...next[3], value: wti.value, change: wti.change, changePct: wti.changePct };
+      }
+      if (gold && gold.value !== mockMarketData.commodities[3].value) {
+        next[4] = { ...next[4], value: gold.value, change: gold.change, changePct: gold.changePct };
+      }
+      ribbonBase.current = next;
+      return next;
+    });
+  }, [commodities.data]);
 
   const data: MarketData = {
     ribbon: ribbonData,

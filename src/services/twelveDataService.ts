@@ -136,12 +136,12 @@ export async function getTwelveEquities(): Promise<DataResult<PriceItem[]>> {
     // ETF prices shown directly — percent_change is accurate from Twelve Data
     // Absolute values are ETF prices, not index values (indices require paid tier)
     const data: PriceItem[] = [
-      etfScaled(spyQ, fb[0], 'S&P 500 (SPY)', 1),
-      etfScaled(qqqQ, fb[1], 'Nasdaq 100 (QQQ)', 1),
-      etfScaled(diaQ, fb[2], 'Dow Jones (DIA)', 1),
-      etfScaled(iwmQ, fb[3], 'Russell 2000 (IWM)', 1),
+      etfScaled(spyQ, fb[0], 'S&P 500', 1),
+      etfScaled(qqqQ, fb[1], 'Nasdaq 100', 1),
+      etfScaled(diaQ, fb[2], 'Dow Jones', 1),
+      etfScaled(iwmQ, fb[3], 'Russell 2000', 1),
       vixyQ ? {
-        label: 'VIX (VIXY)',
+        label: 'VIX',
         value: parseFloat(parseFloat(vixyQ.close).toFixed(2)),
         change: parseFloat(parseFloat(vixyQ.change).toFixed(2)),
         changePct: parseFloat(parseFloat(vixyQ.percent_change).toFixed(2)),
