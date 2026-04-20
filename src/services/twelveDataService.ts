@@ -43,6 +43,7 @@ type TdQuote = {
   close: string;
   change: string;
   percent_change: string;
+  previous_close: string;
   open?: string;
   high?: string;
   low?: string;
@@ -158,20 +159,68 @@ export async function getTwelveEquities(): Promise<DataResult<PriceItem[]>> {
   }
 }
 
+// Compute DXY from constituent currency pairs using the ICE formula
+// DXY = 50.14348112 × EURUSD^(-0.576) × USDJPY^(0.136) × GBPUSD^(-0.119) × USDCAD^(0.091) × USDSEK^(0.042) × USDCHF^(0.036)
+function computeDXY(rates: Record<string, number>): number | null {
+  const eur = rates['EUR/USD'];
+  const jpy = rates['USD/JPY'];
+  const gbp = rates['GBP/USD'];
+  const cad = rates['USD/CAD'];
+  const sek = rates['USD/SEK'];
+  const chf = rates['USD/CHF'];
+  if (!eur || !jpy || !gbp || !cad || !sek || !chf) return null;
+  return 50.14348112
+    * Math.pow(eur, -0.576)
+    * Math.pow(jpy, 0.136)
+    * Math.pow(gbp, -0.119)
+    * Math.pow(cad, 0.091)
+    * Math.pow(sek, 0.042)
+    * Math.pow(chf, 0.036);
+}
+
 export async function getTwelveFX(): Promise<DataResult<PriceItem[]>> {
   try {
-    const symbols = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CNY', 'DX-Y.NYB'];
+    const symbols = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CNY', 'USD/CAD', 'USD/SEK', 'USD/CHF'];
     const batch = await fetchBatchQuotes(symbols);
     const fb = mockMarketData.fx;
 
-    const dxyQ = getQuote(batch, 'DX-Y.NYB');
     const eurusd = getQuote(batch, 'EUR/USD');
     const usdjpy = getQuote(batch, 'USD/JPY');
     const gbpusd = getQuote(batch, 'GBP/USD');
     const usdcny = getQuote(batch, 'USD/CNY');
+    const usdcad = getQuote(batch, 'USD/CAD');
+    const usdsek = getQuote(batch, 'USD/SEK');
+    const usdchf = getQuote(batch, 'USD/CHF');
+
+    // Compute DXY from constituent pairs
+    const fxRates: Record<string, number> = {};
+    if (eurusd) fxRates['EUR/USD'] = parseFloat(eurusd.close);
+    if (usdjpy) fxRates['USD/JPY'] = parseFloat(usdjpy.close);
+    if (gbpusd) fxRates['GBP/USD'] = parseFloat(gbpusd.close);
+    if (usdcad) fxRates['USD/CAD'] = parseFloat(usdcad.close);
+    if (usdsek) fxRates['USD/SEK'] = parseFloat(usdsek.close);
+    if (usdchf) fxRates['USD/CHF'] = parseFloat(usdchf.close);
+
+    const dxyVal = computeDXY(fxRates);
+    // Compute previous DXY for change
+    const prevRates: Record<string, number> = {};
+    if (eurusd) prevRates['EUR/USD'] = parseFloat(eurusd.previous_close);
+    if (usdjpy) prevRates['USD/JPY'] = parseFloat(usdjpy.previous_close);
+    if (gbpusd) prevRates['GBP/USD'] = parseFloat(gbpusd.previous_close);
+    if (usdcad) prevRates['USD/CAD'] = parseFloat(usdcad.previous_close);
+    if (usdsek) prevRates['USD/SEK'] = parseFloat(usdsek.previous_close);
+    if (usdchf) prevRates['USD/CHF'] = parseFloat(usdchf.previous_close);
+    const prevDxy = computeDXY(prevRates);
+
+    const dxyItem: PriceItem = dxyVal != null ? {
+      label: 'DXY',
+      value: parseFloat(dxyVal.toFixed(2)),
+      change: prevDxy != null ? parseFloat((dxyVal - prevDxy).toFixed(2)) : 0,
+      changePct: prevDxy != null ? parseFloat(((dxyVal - prevDxy) / prevDxy * 100).toFixed(2)) : 0,
+    } : fb[0];
 
     const data: PriceItem[] = [
-      dxyQ ? toItem(dxyQ, fb[0], 'DXY') : fb[0],
+      dxyItem,
       eurusd ? toItem(eurusd, fb[1], 'EUR/USD') : fb[1],
       usdjpy ? toItem(usdjpy, fb[2], 'USD/JPY') : fb[2],
       gbpusd ? toItem(gbpusd, fb[3], 'GBP/USD') : fb[3],
@@ -190,19 +239,20 @@ export async function getTwelveFX(): Promise<DataResult<PriceItem[]>> {
 
 export async function getTwelveCommodities(): Promise<DataResult<PriceItem[]>> {
   try {
-    const symbols = ['CL1:COM', 'BZ:COM', 'XAU/USD', 'XAG/USD', 'HG1:COM', 'GAS/USD'];
+    const symbols = ['CL1:COM', 'BNO', 'XAU/USD', 'XAG/USD', 'HG1:COM', 'GAS/USD'];
     const batch = await fetchBatchQuotes(symbols);
     const fb = mockMarketData.commodities;
 
     const wtiQ = getQuote(batch, 'CL1:COM');
-    const brentQ = getQuote(batch, 'BZ:COM');
+    const bnoQ = getQuote(batch, 'BNO');
     const goldQ = getQuote(batch, 'XAU/USD');
     const silverQ = getQuote(batch, 'XAG/USD');
     const copperQ = getQuote(batch, 'HG1:COM');
     const natgasQ = getQuote(batch, 'GAS/USD');
 
     const wtiItem = wtiQ ? { ...toItem(wtiQ, fb[0], 'WTI Crude'), prefix: '$' } : fb[0];
-    const brentItem = brentQ ? { ...toItem(brentQ, fb[1], 'Brent Crude'), prefix: '$' } : fb[1];
+    // BNO ETF tracks Brent crude — show ETF price directly
+    const brentItem = bnoQ ? { ...toItem(bnoQ, fb[1], 'Brent (BNO)'), prefix: '$' } : fb[1];
     const natgasItem = natgasQ ? { ...toItem(natgasQ, fb[2], 'Natural Gas'), prefix: '$' } : fb[2];
     const goldItem = goldQ ? { ...toItem(goldQ, fb[3], 'Gold'), prefix: '$' } : fb[3];
     const silverItem = silverQ ? { ...toItem(silverQ, fb[4], 'Silver'), prefix: '$' } : fb[4];
@@ -233,25 +283,22 @@ export type TwelveRatesResult = {
 
 export async function getTwelveRates(): Promise<DataResult<TwelveRatesResult>> {
   try {
-    const symbols = ['US2Y', 'US5Y', 'US10Y', 'US20Y', 'US30Y'];
+    // Only US2Y is available on Twelve Data — other maturities come from Treasury API
+    const symbols = ['US2Y'];
     const batch = await fetchBatchQuotes(symbols);
 
     const y2 = getQuote(batch, 'US2Y');
-    const y5 = getQuote(batch, 'US5Y');
-    const y10 = getQuote(batch, 'US10Y');
-    const y20 = getQuote(batch, 'US20Y');
-    const y30 = getQuote(batch, 'US30Y');
 
     const data: TwelveRatesResult = {
       y2Val: y2 ? parseFloat(parseFloat(y2.close).toFixed(3)) : null,
       y2Change: y2 ? parseFloat(y2.change) : null,
       y2Pct: y2 ? parseFloat(y2.percent_change) : null,
-      y5Val: y5 ? parseFloat(parseFloat(y5.close).toFixed(3)) : null,
-      y10Val: y10 ? parseFloat(parseFloat(y10.close).toFixed(3)) : null,
-      y10Change: y10 ? parseFloat(y10.change) : null,
-      y10Pct: y10 ? parseFloat(y10.percent_change) : null,
-      y20Val: y20 ? parseFloat(parseFloat(y20.close).toFixed(3)) : null,
-      y30Val: y30 ? parseFloat(parseFloat(y30.close).toFixed(3)) : null,
+      y5Val: null,
+      y10Val: null,
+      y10Change: null,
+      y10Pct: null,
+      y20Val: null,
+      y30Val: null,
     };
 
     return { status: 'ok', data, source: 'live', timestamp: Date.now() };

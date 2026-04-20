@@ -9,6 +9,7 @@ export const TdQuoteSchema = z.object({
   close: z.string(),
   change: z.string(),
   percent_change: z.string(),
+  previous_close: z.string(),
   open: z.string().optional(),
   high: z.string().optional(),
   low: z.string().optional(),
